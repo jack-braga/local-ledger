@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+// 1. Import HashRouter instead of BrowserRouter
+import { HashRouter, Routes, Route } from "react-router-dom";
 import { FinanceProvider } from "@/contexts/FinanceContext";
 import { Layout } from "@/components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -19,8 +20,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <FinanceProvider>
-        {/* Added basename here to match your GitHub repository name */}
-        <BrowserRouter basename="/local-ledger">
+        {/* 2. Use HashRouter. Note: You usually do NOT need the basename here 
+            because the hash is relative to the index.html location automatically. */}
+        <HashRouter>
           <Layout>
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -30,7 +32,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>
-        </BrowserRouter>
+        </HashRouter>
       </FinanceProvider>
     </TooltipProvider>
   </QueryClientProvider>
