@@ -98,7 +98,14 @@ export function NetWorthChart({ transactions }: NetWorthChartProps) {
             borderRadius: '0.5rem',
           }}
           formatter={(value: number) => [`$${value.toLocaleString('en-AU', { minimumFractionDigits: 2 })}`, 'Net Worth']}
-          labelFormatter={(label) => format(new Date(label), 'dd/MM/yyyy')}
+          labelFormatter={(label) => {
+            const date = new Date(label);
+            // Check if date is valid before formatting
+            if (isNaN(date.getTime())) {
+              return label; // Return raw value if invalid to prevent crash
+            }
+            return format(date, 'dd/MM/yyyy');
+          }}
         />
         <Legend />
         <Line

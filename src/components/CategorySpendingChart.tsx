@@ -18,8 +18,7 @@ export function CategorySpendingChart({
     let filtered = transactions.filter(t => {
       // Only include EXPENSE transactions
       if (t.type !== 'EXPENSE') return false;
-      // If excludeTransfers is enabled, also exclude TRANSFER type (though EXPENSE and TRANSFER are mutually exclusive)
-      if (excludeTransfers && t.type === 'TRANSFER') return false;
+      // No need to exclude TRANSFER, as EXPENSE and TRANSFER are mutually exclusive types
       return true;
     });
 
@@ -86,13 +85,16 @@ export function CategorySpendingChart({
             border: '1px solid hsl(var(--border))',
             borderRadius: '0.5rem',
           }}
-          formatter={(value: number, payload: any) => {
-            if (!payload || !payload[0]) return [`$${value.toFixed(2)}`, 'Spending'];
-            const data = payload[0].payload;
-            const netTotal = data.netTotal;
-            const isNegative = netTotal < 0;
+          formatter={(value: number, name: string, item: any) => {
+            // Defensive check: Ensure the payload item exists
+            if (!item || !item.payload) return [value, name];
+
+            // Safely access the data
+            const data = item.payload;
+            const originalAmount = data.netTotal ?? value; // Fallback to value if netTotal is missing
+            const isNegative = originalAmount < 0;
             return [
-              `$${Math.abs(netTotal).toFixed(2)} ${isNegative ? '(Net Expense)' : '(Net Refund)'}`,
+              `$${Math.abs(originalAmount).toFixed(2)} ${isNegative ? '(Net Expense)' : '(Net Refund)'}`,
               'Net Total',
             ];
           }}
