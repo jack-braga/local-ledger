@@ -99,6 +99,36 @@ export default function Dashboard() {
         <p className="text-muted-foreground mt-1">Your financial overview</p>
       </div>
 
+      {/* Getting Started */}
+      {filteredTransactions.length === 0 && state.transactions.length > 0 && (
+        <Card className="border-accent/50 bg-accent/5">
+          <CardHeader>
+            <CardTitle>No Transactions Match Filters</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p>Try adjusting your filters to see transactions.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {state.transactions.length === 0 && (
+        <Card className="border-accent/50 bg-accent/5">
+          <CardHeader>
+            <CardTitle>Getting Started</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p>Welcome to your finance dashboard! Here's how to get started:</p>
+            <ol className="list-decimal list-inside space-y-1 ml-2">
+              <li>Click "Settings" in the sidebar to configure your accounts</li>
+              <li>Click "Categories" in the sidebar to add your categories, and set rules for how new transactions should be categorised</li>
+              <li>Click "Transactions" in the sidebar, and then click "Import CSV" to import your transactions from your bank</li>
+              <li>Review and adjust categories in the Transactions page</li>
+              <li>Click "Dashboard" in the sidebar to see your financial overview (which is where you are now!)</li>
+            </ol>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filters */}
       <TransactionFiltersComponent filters={filters} onFiltersChange={setFilters} />
 
@@ -219,35 +249,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Getting Started */}
-      {filteredTransactions.length === 0 && state.transactions.length > 0 && (
-        <Card className="border-accent/50 bg-accent/5">
-          <CardHeader>
-            <CardTitle>No Transactions Match Filters</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>Try adjusting your filters to see transactions.</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {state.transactions.length === 0 && (
-        <Card className="border-accent/50 bg-accent/5">
-          <CardHeader>
-            <CardTitle>Getting Started</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>Welcome to your finance dashboard! Here's how to get started:</p>
-            <ol className="list-decimal list-inside space-y-1 ml-2">
-              <li>Click "Import CSV" in the sidebar to upload bank statements</li>
-              <li>The app will automatically detect columns and categorize transactions</li>
-              <li>Review and adjust categories in the Transactions page</li>
-              <li>Watch your spending insights appear here!</li>
-            </ol>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

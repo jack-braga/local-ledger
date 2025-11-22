@@ -3,11 +3,13 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import { startOfDay, endOfDay } from 'date-fns';
 import { Transaction } from '@/types/finance';
 import { getTransactionType } from '@/utils/categoryMatcher';
 import { DateRangePicker } from '@/components/DateRangePicker';
+import { Badge } from '@/components/ui/badge';
 
 export interface TransactionFilters {
   dateRange: {
@@ -26,6 +28,7 @@ interface TransactionFiltersProps {
 
 export function TransactionFiltersComponent({ filters, onFiltersChange }: TransactionFiltersProps) {
   const { state } = useFinance();
+  const [isOpen, setIsOpen] = useState(false);
 
   const updateFilters = (updates: Partial<TransactionFilters>) => {
     onFiltersChange({ ...filters, ...updates });
@@ -87,31 +90,64 @@ export function TransactionFiltersComponent({ filters, onFiltersChange }: Transa
     filters.accountIds.length > 0 ||
     filters.categoryIds.length > 0;
 
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (filters.dateRange.startDate !== null || filters.dateRange.endDate !== null) count++;
+    if (filters.transactionTypes.length > 0 && !filters.transactionTypes.includes('all')) count++;
+    if (filters.accountIds.length > 0) count++;
+    if (filters.categoryIds.length > 0) count++;
+    return count;
+  };
+
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Filters</CardTitle>
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters}>
-              <X className="h-4 w-4 mr-1" />
-              Clear
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CardHeader>
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center justify-between cursor-pointer hover:bg-accent/50 -m-6 p-6 rounded-t-lg transition-colors">
+              <div className="flex items-center gap-2">
+                <CardTitle>Filters</CardTitle>
+                {hasActiveFilters && !isOpen && (
+                  <Badge variant="secondary" className="ml-2">
+                    {getActiveFilterCount()}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {isOpen ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent className="space-y-4">
         {/* Date Range Filter */}
         <div className="space-y-2">
           <Label>Date Range</Label>
-          <DateRangePicker
-            onUpdate={handleDateRangeUpdate}
-            initialDateFrom={filters.dateRange.startDate || undefined}
-            initialDateTo={filters.dateRange.endDate || undefined}
-            align="start"
-            locale="en-US"
-            showCompare={false}
-          />
+          <div className="flex items-center justify-between">
+            <DateRangePicker
+              onUpdate={handleDateRangeUpdate}
+              initialDateFrom={filters.dateRange.startDate || undefined}
+              initialDateTo={filters.dateRange.endDate || undefined}
+              align="start"
+              locale="en-US"
+              showCompare={false}
+            />
+            {hasActiveFilters && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearFilters}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Transaction Types Filter */}
@@ -188,7 +224,9 @@ export function TransactionFiltersComponent({ filters, onFiltersChange }: Transa
             </div>
           )}
         </div>
-      </CardContent>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
