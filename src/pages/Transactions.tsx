@@ -11,9 +11,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
-import { Search, MoreVertical, Plus, Edit, Trash2 } from 'lucide-react';
+import { Search, MoreVertical, Plus, Edit, Trash2, Upload } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { getTransactionType } from '@/utils/categoryMatcher';
+import { ImportWizard } from '@/components/ImportWizard';
 
 export default function Transactions() {
   const { state, dispatch } = useFinance();
@@ -23,6 +24,7 @@ export default function Transactions() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Transaction>>({});
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
@@ -143,9 +145,15 @@ export default function Transactions() {
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Transactions</h1>
-        <p className="text-muted-foreground mt-1">View and categorize your transactions</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Transactions</h1>
+          <p className="text-muted-foreground mt-1">View and categorize your transactions</p>
+        </div>
+        <Button onClick={() => setImportOpen(true)}>
+          <Upload className="h-4 w-4 mr-2" />
+          Import CSV
+        </Button>
       </div>
 
       <Card>
@@ -503,6 +511,8 @@ export default function Transactions() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ImportWizard open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

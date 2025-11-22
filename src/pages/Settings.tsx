@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Download, Trash } from 'lucide-react';
+import { Plus, Trash2, Download, Trash, Upload } from 'lucide-react';
 import { Account, Bank } from '@/types/finance';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -24,11 +24,13 @@ const CURRENCIES = [
 ];
 
 export default function Settings() {
-  const { state, dispatch, exportState } = useFinance();
+  const { state, dispatch, exportState, importState } = useFinance();
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountColor, setNewAccountColor] = useState('#3b82f6');
   const [newAccountBank, setNewAccountBank] = useState<Bank>('OTHER');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedImportFile, setSelectedImportFile] = useState<File | null>(null);
 
   const handleCreateAccount = () => {
     if (!newAccountName.trim()) return;
@@ -59,6 +61,39 @@ export default function Settings() {
 
   const handleExportJSON = () => {
     exportState();
+  };
+
+  const handleImportJSON = async (file: File) => {
+    try {
+      await importState(file);
+      setImportDialogOpen(false);
+      // Show success message
+      alert('Data imported successfully! The page will reload.');
+      window.location.reload();
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Failed to import JSON file. Please check the file format and try again.');
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type === 'application/json' || file.name.endsWith('.json')) {
+        setSelectedImportFile(file);
+        setImportDialogOpen(true);
+      } else {
+        alert('Please select a JSON file.');
+      }
+    }
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleConfirmImport = () => {
+    if (selectedImportFile) {
+      handleImportJSON(selectedImportFile);
+    }
   };
 
   const handleClearLocalStorage = () => {
@@ -234,24 +269,82 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Export Section */}
+      {/* Import/Export Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Export Data</CardTitle>
-          <CardDescription>Export your data to a JSON file</CardDescription>
+          <CardTitle>Import / Export Data</CardTitle>
+          <CardDescription>Import or export your data as a JSON file</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Download all your transactions, accounts, categories, and settings as a JSON file for backup or migration.
-            </p>
-            <Button onClick={handleExportJSON} variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export to JSON
-            </Button>
+            <div>
+              <h4 className="font-semibold mb-2">Export Data</h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                Download all your transactions, accounts, categories, and settings as a JSON file for backup or migration.
+              </p>
+              <Button onClick={handleExportJSON} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export to JSON
+              </Button>
+            </div>
+            
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-2">Import Data</h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                Import data from a JSON file. This will <strong className="text-destructive">overwrite all existing data</strong> with the contents of the JSON file.
+              </p>
+              <div className="space-y-2">
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="json-import-input"
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={() => document.getElementById('json-import-input')?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import from JSON
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Import Confirmation Dialog */}
+      <AlertDialog open={importDialogOpen} onOpenChange={(open) => {
+        setImportDialogOpen(open);
+        if (!open) {
+          setSelectedImportFile(null);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will <strong className="text-destructive">permanently overwrite all your current data</strong> with the contents of the JSON file. This includes:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>All transactions</li>
+                <li>All accounts</li>
+                <li>All categories</li>
+                <li>All category rules</li>
+                <li>All settings</li>
+              </ul>
+              <p className="mt-2 font-semibold">This action cannot be undone.</p>
+              <p className="mt-2">Make sure you have exported your current data before proceeding.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmImport} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Yes, import and overwrite
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Clear LocalStorage Section */}
       <Card className="border-destructive">
