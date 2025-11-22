@@ -5,14 +5,34 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
-import { Search } from 'lucide-react';
+import { Search, MoreVertical, Plus, Edit, Trash2 } from 'lucide-react';
+import { Transaction, TransactionType } from '@/types/finance';
 
 export default function Transactions() {
   const { state, dispatch } = useFinance();
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterAccount, setFilterAccount] = useState<string>('all');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<Transaction>>({});
+  const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
+    date: new Date().toISOString().split('T')[0],
+    type: 'EXPENSE',
+    amount: 0,
+    currency: 'USD',
+    accountId: state.accounts[0]?.id || '',
+    categoryId: null,
+    isManualEntry: true,
+  });
 
   const filteredTransactions = useMemo(() => {
     return state.transactions
@@ -36,6 +56,81 @@ export default function Transactions() {
       id: transactionId,
       updates: { categoryId },
     });
+  };
+
+  const handleEdit = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    const dateStr = transaction.date.includes('T') 
+      ? transaction.date.split('T')[0] 
+      : new Date(transaction.date).toISOString().split('T')[0];
+    setEditFormData({
+      date: dateStr,
+      description: transaction.description,
+      amount: transaction.amount,
+      type: transaction.type,
+      accountId: transaction.accountId,
+      categoryId: transaction.categoryId,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDelete = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedTransaction) {
+      dispatch({ type: 'DELETE_TRANSACTION', id: selectedTransaction.id });
+      setIsDeleteDialogOpen(false);
+      setSelectedTransaction(null);
+    }
+  };
+
+  const saveEdit = () => {
+    if (selectedTransaction && editFormData) {
+      const dateValue = editFormData.date as string;
+      const updates: Partial<Transaction> = {
+        ...editFormData,
+        date: dateValue ? new Date(dateValue + 'T00:00:00').toISOString() : selectedTransaction.date,
+      };
+      dispatch({
+        type: 'UPDATE_TRANSACTION',
+        id: selectedTransaction.id,
+        updates,
+      });
+      setIsEditDialogOpen(false);
+      setSelectedTransaction(null);
+      setEditFormData({});
+    }
+  };
+
+  const saveNewTransaction = () => {
+    if (newTransaction.date && newTransaction.description && newTransaction.accountId) {
+      const dateStr = newTransaction.date as string;
+      const transaction: Transaction = {
+        id: crypto.randomUUID(),
+        date: new Date(dateStr + 'T00:00:00').toISOString(),
+        description: newTransaction.description || '',
+        amount: newTransaction.amount || 0,
+        currency: newTransaction.currency || 'USD',
+        type: (newTransaction.type as TransactionType) || 'EXPENSE',
+        accountId: newTransaction.accountId,
+        categoryId: newTransaction.categoryId || null,
+        isManualEntry: true,
+      };
+      dispatch({ type: 'ADD_TRANSACTIONS', transactions: [transaction] });
+      setIsAddDialogOpen(false);
+      setNewTransaction({
+        date: new Date().toISOString().split('T')[0],
+        type: 'EXPENSE',
+        amount: 0,
+        currency: 'USD',
+        accountId: state.accounts[0]?.id || '',
+        categoryId: null,
+        isManualEntry: true,
+      });
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -100,11 +195,19 @@ export default function Transactions() {
       </Card>
 
       <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Transactions</CardTitle>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Transaction
+          </Button>
+        </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]"></TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Account</TableHead>
@@ -116,8 +219,8 @@ export default function Transactions() {
               <TableBody>
                 {filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                      No transactions found. Import a CSV to get started.
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      No transactions found. Import a CSV or add a transaction to get started.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -127,6 +230,28 @@ export default function Transactions() {
 
                     return (
                       <TableRow key={transaction.id}>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              <DropdownMenuItem onClick={() => handleEdit(transaction)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDelete(transaction)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                         <TableCell className="font-mono text-sm">
                           {format(new Date(transaction.date), 'dd/MM/yyyy')}
                         </TableCell>
@@ -185,6 +310,233 @@ export default function Transactions() {
       <div className="text-sm text-muted-foreground">
         Showing {filteredTransactions.length} of {state.transactions.length} transactions
       </div>
+
+      {/* Add Transaction Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Transaction</DialogTitle>
+            <DialogDescription>
+              Add a new transaction manually
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-date">Date</Label>
+              <Input
+                id="new-date"
+                type="date"
+                value={newTransaction.date || ''}
+                onChange={(e) => setNewTransaction({ ...newTransaction, date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-description">Description</Label>
+              <Input
+                id="new-description"
+                value={newTransaction.description || ''}
+                onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
+                placeholder="Transaction description"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-amount">Amount</Label>
+              <Input
+                id="new-amount"
+                type="number"
+                step="0.01"
+                value={newTransaction.amount || 0}
+                onChange={(e) => setNewTransaction({ ...newTransaction, amount: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-type">Type</Label>
+              <Select
+                value={newTransaction.type || 'EXPENSE'}
+                onValueChange={(value) => setNewTransaction({ ...newTransaction, type: value as TransactionType })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="INCOME">Income</SelectItem>
+                  <SelectItem value="EXPENSE">Expense</SelectItem>
+                  <SelectItem value="TRANSFER">Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-account">Account</Label>
+              <Select
+                value={newTransaction.accountId || ''}
+                onValueChange={(value) => setNewTransaction({ ...newTransaction, accountId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {state.accounts.map(account => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-category">Category (Optional)</Label>
+              <Select
+                value={newTransaction.categoryId || 'none'}
+                onValueChange={(value) => setNewTransaction({ ...newTransaction, categoryId: value === 'none' ? null : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {state.categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveNewTransaction}>
+              Add Transaction
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Transaction Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Transaction</DialogTitle>
+            <DialogDescription>
+              Update transaction details
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-date">Date</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={editFormData.date || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Input
+                id="edit-description"
+                value={editFormData.description || ''}
+                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                placeholder="Transaction description"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-amount">Amount</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                step="0.01"
+                value={editFormData.amount || 0}
+                onChange={(e) => setEditFormData({ ...editFormData, amount: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-type">Type</Label>
+              <Select
+                value={editFormData.type || 'EXPENSE'}
+                onValueChange={(value) => setEditFormData({ ...editFormData, type: value as TransactionType })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="INCOME">Income</SelectItem>
+                  <SelectItem value="EXPENSE">Expense</SelectItem>
+                  <SelectItem value="TRANSFER">Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-account">Account</Label>
+              <Select
+                value={editFormData.accountId || ''}
+                onValueChange={(value) => setEditFormData({ ...editFormData, accountId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {state.accounts.map(account => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-category">Category (Optional)</Label>
+              <Select
+                value={editFormData.categoryId || 'none'}
+                onValueChange={(value) => setEditFormData({ ...editFormData, categoryId: value === 'none' ? null : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {state.categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveEdit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the transaction
+              {selectedTransaction && ` "${selectedTransaction.description}"`}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
