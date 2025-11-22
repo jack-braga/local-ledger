@@ -15,12 +15,20 @@ import { Search, MoreVertical, Plus, Edit, Trash2, Upload } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { getTransactionType } from '@/utils/categoryMatcher';
 import { ImportWizard } from '@/components/ImportWizard';
+import { TransactionFiltersComponent, TransactionFilters, applyTransactionFilters } from '@/components/TransactionFilters';
 
 export default function Transactions() {
   const { state, dispatch } = useFinance();
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterAccount, setFilterAccount] = useState<string>('all');
+  const [filters, setFilters] = useState<TransactionFilters>({
+    dateRange: {
+      startDate: null,
+      endDate: null,
+    },
+    transactionTypes: ['all'],
+    accountIds: [],
+    categoryIds: [],
+  });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -37,23 +45,18 @@ export default function Transactions() {
   });
 
   const filteredTransactions = useMemo(() => {
-    return state.transactions
-      .filter(t => {
-        if (search) {
-          const searchLower = search.toLowerCase();
-          if (!t.description.toLowerCase().includes(searchLower)) {
-            return false;
-          }
-        }
-        if (filterType !== 'all') {
-          const transactionType = getTransactionType(t.amount);
-          if (transactionType !== filterType) return false;
-        }
-        if (filterAccount !== 'all' && t.accountId !== filterAccount) return false;
-        return true;
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [state.transactions, search, filterType, filterAccount]);
+    let filtered = applyTransactionFilters(state.transactions, filters);
+    
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(t => 
+        t.description.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [state.transactions, filters, search]);
 
   const handleCategoryChange = (transactionId: string, categoryId: string) => {
     dispatch({
@@ -156,47 +159,21 @@ export default function Transactions() {
         </Button>
       </div>
 
+      {/* Filters */}
+      <TransactionFiltersComponent filters={filters} onFiltersChange={setFilters} />
+
+      {/* Search Bar */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search descriptions..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search descriptions..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
-
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="INCOME">Income</SelectItem>
-              <SelectItem value="EXPENSE">Expense</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={filterAccount} onValueChange={setFilterAccount}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Account" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Accounts</SelectItem>
-              {state.accounts.map(account => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </CardContent>
       </Card>
 

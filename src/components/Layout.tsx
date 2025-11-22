@@ -30,12 +30,25 @@ export function Layout({ children }: LayoutProps) {
           "border-b border-sidebar-border transition-all duration-300 flex-shrink-0",
           isCollapsed ? "p-4" : "p-6"
         )}>
-          {!isCollapsed && (
-            <>
-              <h1 className="text-xl font-bold text-sidebar-foreground">FinanceTracker</h1>
-              <p className="text-xs text-sidebar-foreground/60 mt-1">Local-First Finance</p>
-            </>
-          )}
+          <div className={cn(
+            "flex items-center gap-3",
+            isCollapsed ? "justify-center" : ""
+          )}>
+            <img 
+              src={`${import.meta.env.BASE_URL}localLedgerLogo.png`}
+              alt="LocalLedger Logo" 
+              className={cn(
+                "flex-shrink-0",
+                isCollapsed ? "h-8 w-8" : "h-10 w-10"
+              )}
+            />
+            {!isCollapsed && (
+              <div>
+                <h1 className="text-xl font-bold text-sidebar-foreground">LocalLedger</h1>
+                <p className="text-xs text-sidebar-foreground/60 mt-1">Local-First Finance</p>
+              </div>
+            )}
+          </div>
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -43,7 +56,7 @@ export function Layout({ children }: LayoutProps) {
             const navLink = (
               <NavLink
                 key={to}
-                to={to}
+                to={to} 
                 end={to === '/'}
                 className={cn(
                   "flex items-center rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",

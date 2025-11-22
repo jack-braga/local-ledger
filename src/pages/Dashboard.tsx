@@ -6,14 +6,29 @@ import { TrendingUp, TrendingDown, DollarSign, CreditCard } from 'lucide-react';
 import { NetWorthChart } from '@/components/NetWorthChart';
 import { CategorySpendingChart } from '@/components/CategorySpendingChart';
 import { getTransactionType } from '@/utils/categoryMatcher';
+import { TransactionFiltersComponent, TransactionFilters, applyTransactionFilters } from '@/components/TransactionFilters';
 
 export default function Dashboard() {
   const { state } = useFinance();
+  const [filters, setFilters] = useState<TransactionFilters>({
+    dateRange: {
+      startDate: null,
+      endDate: null,
+    },
+    transactionTypes: ['all'],
+    accountIds: [],
+    categoryIds: [],
+  });
+
+  // Apply filters to transactions
+  const filteredTransactions = useMemo(() => {
+    return applyTransactionFilters(state.transactions, filters);
+  }, [state.transactions, filters]);
 
   // Calculate stats with proper refund handling
   const stats = useMemo(() => {
-    let incomeTransactions = state.transactions.filter(t => getTransactionType(t.amount) === 'INCOME');
-    let expenseTransactions = state.transactions.filter(t => getTransactionType(t.amount) === 'EXPENSE');
+    let incomeTransactions = filteredTransactions.filter(t => getTransactionType(t.amount) === 'INCOME');
+    let expenseTransactions = filteredTransactions.filter(t => getTransactionType(t.amount) === 'EXPENSE');
 
     // Income: sum all positive amounts
     const income = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -27,7 +42,7 @@ export default function Dashboard() {
     }, 0);
 
     // Net worth: sum of ALL transactions (all accounts)
-    const netWorth = state.transactions.reduce((sum, t) => sum + t.amount, 0);
+    const netWorth = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
 
     // Calculate monthly spending (last 30 days)
     const thirtyDaysAgo = new Date();
@@ -46,15 +61,15 @@ export default function Dashboard() {
       netWorth,
       monthlySpending: Math.abs(monthlySpending),
       savingsRate,
-      totalTransactions: state.transactions.length,
-      uncategorized: state.transactions.filter(t => !t.categoryId).length,
+      totalTransactions: filteredTransactions.length,
+      uncategorized: filteredTransactions.filter(t => !t.categoryId).length,
     };
-  }, [state.transactions]);
+  }, [filteredTransactions]);
 
   // Income vs Expense data for donut chart
   const incomeExpenseData = useMemo(() => {
-    let incomeTransactions = state.transactions.filter(t => getTransactionType(t.amount) === 'INCOME');
-    let expenseTransactions = state.transactions.filter(t => getTransactionType(t.amount) === 'EXPENSE');
+    let incomeTransactions = filteredTransactions.filter(t => getTransactionType(t.amount) === 'INCOME');
+    let expenseTransactions = filteredTransactions.filter(t => getTransactionType(t.amount) === 'EXPENSE');
 
     // Income: sum all positive amounts
     const income = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -75,7 +90,7 @@ export default function Dashboard() {
         color: '#ef4444', // destructive color
       },
     ].filter(item => item.value > 0);
-  }, [state.transactions]);
+  }, [filteredTransactions]);
 
   return (
     <div className="p-8 space-y-8">
@@ -83,6 +98,9 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground mt-1">Your financial overview</p>
       </div>
+
+      {/* Filters */}
+      <TransactionFiltersComponent filters={filters} onFiltersChange={setFilters} />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -143,7 +161,7 @@ export default function Dashboard() {
           <CardTitle>Net Worth Over Time</CardTitle>
         </CardHeader>
         <CardContent>
-          <NetWorthChart transactions={state.transactions} />
+          <NetWorthChart transactions={filteredTransactions} />
         </CardContent>
       </Card>
 
@@ -155,7 +173,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <CategorySpendingChart
-              transactions={state.transactions}
+              transactions={filteredTransactions}
               categories={state.categories}
             />
           </CardContent>
@@ -203,6 +221,17 @@ export default function Dashboard() {
       </div>
 
       {/* Getting Started */}
+      {filteredTransactions.length === 0 && state.transactions.length > 0 && (
+        <Card className="border-accent/50 bg-accent/5">
+          <CardHeader>
+            <CardTitle>No Transactions Match Filters</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p>Try adjusting your filters to see transactions.</p>
+          </CardContent>
+        </Card>
+      )}
+
       {state.transactions.length === 0 && (
         <Card className="border-accent/50 bg-accent/5">
           <CardHeader>
