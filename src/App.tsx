@@ -19,7 +19,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <FinanceProvider>
-        <BrowserRouter>
+        {/* Added basename here to match your GitHub repository name */}
+        <BrowserRouter basename="/local-ledger">
           <Layout>
             <Routes>
               <Route path="/" element={<Dashboard />} />
