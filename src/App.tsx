@@ -8,7 +8,7 @@ import { FinanceProvider } from "@/contexts/FinanceContext";
 import { Layout } from "@/components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
-import Accounts from "./pages/Accounts";
+import Settings from "./pages/Settings";
 import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
 
@@ -27,7 +27,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/transactions" element={<Transactions />} />
-              <Route path="/accounts" element={<Accounts />} />
+              <Route path="/accounts" element={<Settings />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

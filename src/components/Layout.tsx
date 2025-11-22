@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { NavLink } from '@/components/NavLink';
-import { LayoutDashboard, CreditCard, ListFilter, Settings, Upload, Download, FileJson } from 'lucide-react';
+import { LayoutDashboard, CreditCard, ListFilter, Settings, Upload, Download, FileJson, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImportWizard } from '@/components/ImportWizard';
 import { useFinance } from '@/contexts/FinanceContext';
@@ -15,9 +15,9 @@ export function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/accounts', icon: CreditCard, label: 'Accounts' },
+    { to: '/accounts', icon: Settings, label: 'Settings' },
     { to: '/transactions', icon: ListFilter, label: 'Transactions' },
-    { to: '/categories', icon: Settings, label: 'Categories' },
+    { to: '/categories', icon: Tags, label: 'Categories' },
   ];
 
   return (

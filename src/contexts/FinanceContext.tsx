@@ -16,6 +16,7 @@ type Action =
   | { type: 'UPDATE_RULE'; id: string; updates: Partial<CategoryRule> }
   | { type: 'DELETE_RULE'; id: string }
   | { type: 'REORDER_RULES'; ruleIds: string[] }
+  | { type: 'UPDATE_CURRENCY'; currency: string }
   | { type: 'IMPORT_STATE'; state: AppState }
   | { type: 'RESET_STATE' };
 
@@ -24,6 +25,7 @@ const initialState: AppState = {
   accounts: [],
   categories: [],
   rules: [],
+  currency: 'AUD',
   version: '1.0.0',
   lastModified: new Date().toISOString(),
 };
@@ -146,15 +148,23 @@ function financeReducer(state: AppState, action: Action): AppState {
           rules: [...reorderedRules, ...remainingRules],
         };
       
+      case 'UPDATE_CURRENCY':
+        return {
+          ...state,
+          currency: action.currency,
+        };
+      
       case 'IMPORT_STATE':
         return {
           ...action.state,
+          currency: action.state.currency || 'AUD',
           lastModified: new Date().toISOString(),
         };
       
       case 'RESET_STATE':
         return {
           ...initialState,
+          currency: 'AUD',
           lastModified: new Date().toISOString(),
         };
       

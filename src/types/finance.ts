@@ -46,6 +46,7 @@ export interface AppState {
   accounts: Account[];
   categories: Category[];
   rules: CategoryRule[];
+  currency: string;
   version: string;
   lastModified: string;
 }
