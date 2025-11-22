@@ -160,83 +160,86 @@ export function DateRangePicker({
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align={align}>
         <div className="p-4">
-          <div className="space-y-4">
-            {/* Preset Ranges */}
-            <div className="space-y-2">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Left side: Calendar and Date Inputs */}
+            <div className="flex-1 space-y-4">
+              {/* Calendar */}
+              <div className="space-y-2">
+                <Label>Calendar</Label>
+                <Calendar
+                  mode="range"
+                  selected={dateRange}
+                  onSelect={handleCalendarSelect}
+                  numberOfMonths={2}
+                  initialFocus
+                />
+              </div>
+
+              {/* Date Inputs */}
+              <div className="grid grid-cols-2 gap-4">
+                <DateInput
+                  label="From"
+                  date={dateFrom}
+                  onDateChange={setDateFrom}
+                />
+                <DateInput
+                  label="To"
+                  date={dateTo}
+                  onDateChange={setDateTo}
+                />
+              </div>
+
+              {/* Compare Toggle */}
+              {showCompare && (
+                <div className="flex items-center justify-between space-x-2 border-t pt-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="compare">Compare</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Compare to previous period
+                    </p>
+                  </div>
+                  <Switch
+                    id="compare"
+                    checked={compareEnabled}
+                    onCheckedChange={setCompareEnabled}
+                  />
+                </div>
+              )}
+
+              {/* Compare Date Inputs */}
+              {showCompare && compareEnabled && (
+                <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                  <DateInput
+                    label="Compare From"
+                    date={compareFrom}
+                    onDateChange={setCompareFrom}
+                  />
+                  <DateInput
+                    label="Compare To"
+                    date={compareTo}
+                    onDateChange={setCompareTo}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Right side: Preset Ranges (on wider screens) */}
+            <div className="lg:border-l lg:pl-4 space-y-2 lg:min-w-[200px]">
               <Label>Presets</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
                 {PRESET_RANGES.map((preset) => (
                   <Button
                     key={preset.value}
                     variant="outline"
                     size="sm"
                     onClick={() => handlePresetClick(preset.value)}
-                    className="text-xs"
+                    className="text-xs w-full"
                   >
                     {preset.label}
                   </Button>
                 ))}
               </div>
             </div>
-
-            {/* Calendar */}
-            <div className="space-y-2">
-              <Label>Calendar</Label>
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={handleCalendarSelect}
-                numberOfMonths={2}
-                initialFocus
-              />
-            </div>
-
-            {/* Date Inputs */}
-            <div className="grid grid-cols-2 gap-4">
-              <DateInput
-                label="From"
-                date={dateFrom}
-                onDateChange={setDateFrom}
-              />
-              <DateInput
-                label="To"
-                date={dateTo}
-                onDateChange={setDateTo}
-              />
-            </div>
-
-            {/* Compare Toggle */}
-            {showCompare && (
-              <div className="flex items-center justify-between space-x-2 border-t pt-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="compare">Compare</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Compare to previous period
-                  </p>
-                </div>
-                <Switch
-                  id="compare"
-                  checked={compareEnabled}
-                  onCheckedChange={setCompareEnabled}
-                />
-              </div>
-            )}
-
-            {/* Compare Date Inputs */}
-            {showCompare && compareEnabled && (
-              <div className="grid grid-cols-2 gap-4 border-t pt-4">
-                <DateInput
-                  label="Compare From"
-                  date={compareFrom}
-                  onDateChange={setCompareFrom}
-                />
-                <DateInput
-                  label="Compare To"
-                  date={compareTo}
-                  onDateChange={setCompareTo}
-                />
-              </div>
-            )}
           </div>
         </div>
       </PopoverContent>
