@@ -52,9 +52,11 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
     if (!file) return;
 
     let accountId = selectedAccountId;
+    let bankId: Bank = 'OTHER';
+    const isNewAccount = selectedAccountId === 'new';
 
     // Create new account if needed
-    if (selectedAccountId === 'new' && newAccountName.trim()) {
+    if (isNewAccount && newAccountName.trim()) {
       const newAccount: Account = {
         id: `acc-${Date.now()}`,
         name: newAccountName.trim(),
@@ -63,6 +65,8 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
       };
       dispatch({ type: 'ADD_ACCOUNT', account: newAccount });
       accountId = newAccount.id;
+      // Use the bank that was selected for the new account directly
+      bankId = newAccountBank;
     } else if (!selectedAccountId || selectedAccountId === 'new') {
       toast({
         title: 'Account required',
@@ -77,9 +81,11 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
     setCurrentAccountId(accountId);
 
     try {
-      // Get the selected account to determine bank
-      const selectedAccount = state.accounts.find(acc => acc.id === accountId);
-      const bankId = selectedAccount?.bankId || 'OTHER';
+      // Get the selected account to determine bank (only if not a new account)
+      if (!isNewAccount) {
+        const selectedAccount = state.accounts.find(acc => acc.id === accountId);
+        bankId = selectedAccount?.bankId || 'OTHER';
+      }
 
       // Read CSV headers (or first line if headerless)
       const text = await file.text();
