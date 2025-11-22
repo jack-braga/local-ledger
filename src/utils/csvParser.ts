@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import { parse, isValid, differenceInDays } from 'date-fns';
-import { CSVColumnMapping, ImportedTransaction, Transaction, PotentialDuplicate } from '@/types/finance';
+import { CSVColumnMapping, ImportedTransaction, Transaction, PotentialDuplicate, Bank } from '@/types/finance';
 
 const DATE_FORMATS = [
   'dd/MM/yyyy',
@@ -66,6 +66,132 @@ export function detectColumns(headers: string[]): CSVColumnMapping {
   };
 }
 
+/**
+ * Get hardcoded column mapping for a specific bank
+ * Returns mapping with column indices (for CSVs without headers) or column names (for CSVs with headers)
+ */
+export function getBankColumnMapping(bankId: Bank, headers: string[]): CSVColumnMapping | null {
+  console.log('[CSV Parser] getBankColumnMapping called for bank:', bankId);
+  console.log('[CSV Parser] Headers received:', headers);
+  console.log('[CSV Parser] Headers length:', headers.length);
+  
+  // Check if CSV has headers or is headerless
+  // Headers are considered valid if they contain recognizable column names
+  const hasValidHeaders = headers.length > 0 && headers.some(h => {
+    const normalized = h.trim().toLowerCase();
+    return normalized && (
+      normalized.includes('date') || 
+      normalized.includes('amount') || 
+      normalized.includes('description') ||
+      normalized.includes('debit') ||
+      normalized.includes('credit')
+    );
+  });
+  const isHeaderless = !hasValidHeaders || headers.length === 0 || headers.every(h => !h || h.trim() === '');
+  
+  console.log('[CSV Parser] CSV has valid headers:', hasValidHeaders, 'is headerless:', isHeaderless);
+  
+  const normalizedHeaders = headers.map(h => h.trim().toLowerCase());
+  
+  switch (bankId) {
+    case 'CBA': {
+      // CBA format: Date, Amount (signed), Description, Balance
+      // Column 0: Date (e.g., 31/01/2025)
+      // Column 1: Amount (negative for debits, positive for credits, e.g., -5.26, +212.62)
+      // Column 2: Description
+      // Column 3: Balance
+      
+      // If headerless, use column indices
+      if (isHeaderless || headers.length === 0) {
+        console.log('[CSV Parser] CBA: Using column indices (headerless CSV)');
+        return {
+          dateColumn: '0', // Column index as string
+          descriptionColumn: '2',
+          amountColumn: '1',
+          debitColumn: null,
+          creditColumn: null,
+          balanceColumn: '3',
+        };
+      }
+      
+      // Try to find headers
+      const dateCol = normalizedHeaders.findIndex(h => 
+        h === 'date' || h === 'transaction date' || h.includes('date')
+      );
+      const amountCol = normalizedHeaders.findIndex(h => 
+        h === 'amount' || h === 'transaction amount' || h.includes('amount')
+      );
+      const descCol = normalizedHeaders.findIndex(h => 
+        h === 'description' || h === 'details' || h.includes('description')
+      );
+      const balanceCol = normalizedHeaders.findIndex(h => 
+        h === 'balance' || h.includes('balance')
+      );
+
+      console.log('[CSV Parser] CBA: Found columns - date:', dateCol, 'amount:', amountCol, 'desc:', descCol, 'balance:', balanceCol);
+
+      // If we can't find headers, fall back to column indices
+      if (dateCol === -1 || amountCol === -1 || descCol === -1) {
+        console.log('[CSV Parser] CBA: Headers not found, falling back to column indices');
+        return {
+          dateColumn: '0',
+          descriptionColumn: '2',
+          amountColumn: '1',
+          debitColumn: null,
+          creditColumn: null,
+          balanceColumn: '3',
+        };
+      }
+
+      return {
+        dateColumn: headers[dateCol],
+        descriptionColumn: headers[descCol],
+        amountColumn: headers[amountCol],
+        debitColumn: null,
+        creditColumn: null,
+        balanceColumn: balanceCol !== -1 ? headers[balanceCol] : null,
+      };
+    }
+    
+    case 'STGEORGE': {
+      // St.George format: Similar to CBA, typically Date, Description, Debit, Credit, Balance
+      const dateCol = normalizedHeaders.findIndex(h => 
+        h === 'date' || h === 'transaction date' || h === 'value date' || h.includes('date')
+      );
+      const descCol = normalizedHeaders.findIndex(h => 
+        h === 'description' || h === 'narrative' || h === 'details' || h.includes('description')
+      );
+      const debitCol = normalizedHeaders.findIndex(h => 
+        h === 'debit' || h === 'withdrawal' || h.includes('debit')
+      );
+      const creditCol = normalizedHeaders.findIndex(h => 
+        h === 'credit' || h === 'deposit' || h.includes('credit')
+      );
+      const balanceCol = normalizedHeaders.findIndex(h => 
+        h === 'balance' || h.includes('balance')
+      );
+
+      if (dateCol === -1 || descCol === -1 || (debitCol === -1 && creditCol === -1)) {
+        return null;
+      }
+
+      return {
+        dateColumn: headers[dateCol],
+        descriptionColumn: headers[descCol],
+        amountColumn: null,
+        debitColumn: debitCol !== -1 ? headers[debitCol] : null,
+        creditColumn: creditCol !== -1 ? headers[creditCol] : null,
+        balanceColumn: balanceCol !== -1 ? headers[balanceCol] : null,
+      };
+    }
+    
+    case 'OTHER':
+    default:
+      // Fall back to auto-detection
+      return detectColumns(headers);
+  }
+}
+
 function parseDate(dateStr: string): string | null {
   for (const format of DATE_FORMATS) {
     const parsed = parse(dateStr, format, new Date());
@@ -86,52 +212,102 @@ export async function parseCSV(
   file: File,
   columnMapping: CSVColumnMapping
 ): Promise<ImportedTransaction[]> {
+  console.log('[CSV Parser] parseCSV called with columnMapping:', columnMapping);
+  
   return new Promise((resolve, reject) => {
+    // Check if we're using column indices (headerless CSV)
+    const isUsingIndices = columnMapping.dateColumn && /^\d+$/.test(columnMapping.dateColumn);
+    const useHeader = !isUsingIndices;
+    
+    console.log('[CSV Parser] Using header mode:', useHeader, 'isUsingIndices:', isUsingIndices);
+    
     Papa.parse(file, {
-      header: true,
+      header: useHeader,
       skipEmptyLines: true,
       complete: (results) => {
         try {
+          console.log('[CSV Parser] Papa.parse complete. Rows:', results.data.length);
+          console.log('[CSV Parser] First row sample:', results.data[0]);
+          
           const transactions: ImportedTransaction[] = [];
+          let skippedRows = 0;
 
-          for (const row of results.data as Record<string, string>[]) {
+          for (let i = 0; i < results.data.length; i++) {
+            const row = results.data[i] as Record<string, string> | string[];
             try {
+              // Helper to get value from row (handles both object and array)
+              const getValue = (columnName: string | null): string | null => {
+                if (!columnName) return null;
+                
+                if (isUsingIndices) {
+                  // Column indices - row is an array
+                  const index = parseInt(columnName, 10);
+                  if (isNaN(index)) return null;
+                  const rowArray = row as string[];
+                  return rowArray[index] || null;
+                } else {
+                  // Column names - row is an object
+                  const rowObj = row as Record<string, string>;
+                  return rowObj[columnName] || null;
+                }
+              };
+
               // Extract date
-              const dateStr = columnMapping.dateColumn ? row[columnMapping.dateColumn] : null;
-              if (!dateStr || typeof dateStr !== 'string') continue;
+              const dateStr = getValue(columnMapping.dateColumn);
+              console.log(`[CSV Parser] Row ${i}: dateStr =`, dateStr);
+              
+              if (!dateStr || typeof dateStr !== 'string' || dateStr.trim() === '') {
+                console.log(`[CSV Parser] Row ${i}: Skipping - no date`);
+                skippedRows++;
+                continue;
+              }
               
               const date = parseDate(dateStr);
-              if (!date) continue;
+              if (!date) {
+                console.log(`[CSV Parser] Row ${i}: Skipping - could not parse date:`, dateStr);
+                skippedRows++;
+                continue;
+              }
+              console.log(`[CSV Parser] Row ${i}: Parsed date:`, date);
 
               // Extract description
-              const description = columnMapping.descriptionColumn
-                ? (row[columnMapping.descriptionColumn] || 'Unknown')
-                : 'Unknown';
+              const description = getValue(columnMapping.descriptionColumn) || 'Unknown';
+              console.log(`[CSV Parser] Row ${i}: description =`, description);
 
               // Extract amount
               let amount = 0;
               
               if (columnMapping.amountColumn) {
                 // Scenario A: Single amount column
-                const amountStr = row[columnMapping.amountColumn];
+                const amountStr = getValue(columnMapping.amountColumn);
+                console.log(`[CSV Parser] Row ${i}: amountStr =`, amountStr);
+                
                 if (amountStr && typeof amountStr === 'string') {
                   amount = parseAmount(amountStr);
+                  console.log(`[CSV Parser] Row ${i}: Parsed amount:`, amount);
                 } else {
+                  console.log(`[CSV Parser] Row ${i}: Skipping - invalid amount string`);
+                  skippedRows++;
                   continue; // Skip if amount is invalid
                 }
               } else if (columnMapping.debitColumn && columnMapping.creditColumn) {
                 // Scenario B: Separate debit/credit columns
-                const debitStr = row[columnMapping.debitColumn] || '0';
-                const creditStr = row[columnMapping.creditColumn] || '0';
+                const debitStr = getValue(columnMapping.debitColumn) || '0';
+                const creditStr = getValue(columnMapping.creditColumn) || '0';
                 const debit = parseAmount(debitStr);
                 const credit = parseAmount(creditStr);
                 amount = credit - debit; // Credit is positive, debit is negative
+                console.log(`[CSV Parser] Row ${i}: debit:`, debit, 'credit:', credit, 'amount:', amount);
               } else {
+                console.log(`[CSV Parser] Row ${i}: Skipping - cannot determine amount`);
+                skippedRows++;
                 continue; // Cannot determine amount
               }
 
               // Validate amount is a valid number
               if (isNaN(amount) || !isFinite(amount)) {
+                console.log(`[CSV Parser] Row ${i}: Skipping - invalid amount value:`, amount);
+                skippedRows++;
                 continue; // Skip invalid amounts
               }
 
@@ -139,21 +315,27 @@ export async function parseCSV(
                 date,
                 description: description.trim(),
                 amount,
-                rawData: row,
+                rawData: isUsingIndices ? {} : (row as Record<string, string>),
               });
+              
+              console.log(`[CSV Parser] Row ${i}: Successfully parsed transaction`);
             } catch (error) {
               // Skip malformed rows instead of crashing
-              console.warn('Skipping malformed CSV row:', error, row);
+              console.warn(`[CSV Parser] Row ${i}: Error parsing row:`, error, row);
+              skippedRows++;
               continue;
             }
           }
 
+          console.log(`[CSV Parser] Parsing complete. Successfully parsed: ${transactions.length}, Skipped: ${skippedRows}`);
           resolve(transactions);
         } catch (error) {
+          console.error('[CSV Parser] Error in parseCSV complete handler:', error);
           reject(error);
         }
       },
       error: (error) => {
+        console.error('[CSV Parser] Papa.parse error:', error);
         reject(error);
       },
     });

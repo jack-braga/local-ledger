@@ -5,14 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
-import { Account } from '@/types/finance';
+import { Account, Bank } from '@/types/finance';
 
 export default function Accounts() {
   const { state, dispatch } = useFinance();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountColor, setNewAccountColor] = useState('#3b82f6');
+  const [newAccountBank, setNewAccountBank] = useState<Bank>('OTHER');
 
   const handleCreateAccount = () => {
     if (!newAccountName.trim()) return;
@@ -21,11 +23,13 @@ export default function Accounts() {
       id: `acc-${Date.now()}`,
       name: newAccountName.trim(),
       color: newAccountColor,
+      bankId: newAccountBank,
     };
 
     dispatch({ type: 'ADD_ACCOUNT', account: newAccount });
     setNewAccountName('');
     setNewAccountColor('#3b82f6');
+    setNewAccountBank('OTHER');
     setDialogOpen(false);
   };
 
@@ -72,6 +76,22 @@ export default function Accounts() {
                   onChange={(e) => setNewAccountName(e.target.value)}
                   placeholder="e.g., CBA Everyday"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Bank</Label>
+                <Select value={newAccountBank} onValueChange={(value) => setNewAccountBank(value as Bank)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select bank" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CBA">Commonwealth Bank (CBA)</SelectItem>
+                    <SelectItem value="STGEORGE">St.George</SelectItem>
+                    <SelectItem value="OTHER">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  This determines the CSV format when importing transactions
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Color</Label>

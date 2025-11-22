@@ -1,5 +1,7 @@
 export type TransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 
+export type Bank = 'CBA' | 'STGEORGE' | 'OTHER';
+
 export interface Transaction {
   id: string;
   date: string; // ISO date string
@@ -20,6 +22,7 @@ export interface Account {
   color: string;
   balance?: number;
   institution?: string;
+  bankId?: Bank; // Bank identifier for CSV parsing
 }
 
 export interface Category {

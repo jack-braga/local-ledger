@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useFinance } from '@/contexts/FinanceContext';
-import { Account, Transaction, ImportedTransaction, PotentialDuplicate } from '@/types/finance';
-import { parseCSV, detectColumns, findPotentialDuplicates } from '@/utils/csvParser';
+import { Account, Transaction, ImportedTransaction, PotentialDuplicate, Bank, CSVColumnMapping } from '@/types/finance';
+import { parseCSV, detectColumns, getBankColumnMapping, findPotentialDuplicates } from '@/utils/csvParser';
 import { inferTransactionType, autoCategorizeTransaction } from '@/utils/categoryMatcher';
 import { MergeTransactionDialog } from '@/components/MergeTransactionDialog';
 import { toast } from '@/hooks/use-toast';
@@ -22,6 +22,7 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
   const [file, setFile] = useState<File | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountBank, setNewAccountBank] = useState<Bank>('OTHER');
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'upload' | 'account' | 'processing' | 'merging'>('upload');
   
@@ -58,6 +59,7 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
         id: `acc-${Date.now()}`,
         name: newAccountName.trim(),
         color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
+        bankId: newAccountBank,
       };
       dispatch({ type: 'ADD_ACCOUNT', account: newAccount });
       accountId = newAccount.id;
@@ -75,13 +77,41 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
     setCurrentAccountId(accountId);
 
     try {
-      // Read CSV headers
-      const text = await file.text();
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      // Get the selected account to determine bank
+      const selectedAccount = state.accounts.find(acc => acc.id === accountId);
+      const bankId = selectedAccount?.bankId || 'OTHER';
 
-      // Auto-detect columns
-      const columnMapping = detectColumns(headers);
+      // Read CSV headers (or first line if headerless)
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim() !== '');
+      console.log('[ImportWizard] CSV file read. Total lines:', lines.length);
+      console.log('[ImportWizard] First line:', lines[0]);
+      
+      // Try to parse headers - split by comma, handling quoted values
+      const firstLine = lines[0] || '';
+      const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      console.log('[ImportWizard] Parsed headers:', headers);
+
+      // Use bank-specific column mapping if bank is specified
+      let columnMapping: CSVColumnMapping | null = null;
+      
+      if (bankId !== 'OTHER') {
+        columnMapping = getBankColumnMapping(bankId, headers);
+        console.log('[ImportWizard] Bank-specific mapping result:', columnMapping);
+        if (!columnMapping) {
+          toast({
+            title: 'CSV format mismatch',
+            description: `Could not parse CSV for ${bankId}. Please check the file format matches the bank's standard format.`,
+            variant: 'destructive',
+          });
+          setIsProcessing(false);
+          return;
+        }
+      } else {
+        // Fall back to auto-detection for OTHER banks
+        columnMapping = detectColumns(headers);
+        console.log('[ImportWizard] Auto-detected mapping:', columnMapping);
+      }
 
       if (!columnMapping.dateColumn || !columnMapping.descriptionColumn) {
         toast({
@@ -248,6 +278,7 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
     setFile(null);
     setSelectedAccountId('');
     setNewAccountName('');
+    setNewAccountBank('OTHER');
     setStep('upload');
     setIsProcessing(false);
     setMergeDialogOpen(false);
@@ -280,7 +311,7 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
                   <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-sm font-medium mb-1">Click to upload CSV</p>
                   <p className="text-xs text-muted-foreground">
-                    Supports CBA, St.George, and other bank formats
+                    CSV format is automatically detected based on the selected account's bank
                   </p>
                 </label>
               </div>
@@ -316,7 +347,12 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
                             className="h-3 w-3 rounded-full"
                             style={{ backgroundColor: account.color }}
                           />
-                          {account.name}
+                          <span>{account.name}</span>
+                          {account.bankId && account.bankId !== 'OTHER' && (
+                            <span className="text-xs text-muted-foreground">
+                              ({account.bankId === 'CBA' ? 'CBA' : account.bankId === 'STGEORGE' ? 'St.George' : account.bankId})
+                            </span>
+                          )}
                         </div>
                       </SelectItem>
                     ))}
@@ -326,14 +362,32 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
               </div>
 
               {selectedAccountId === 'new' && (
-                <div className="space-y-2">
-                  <Label>New Account Name</Label>
-                  <Input
-                    value={newAccountName}
-                    onChange={(e) => setNewAccountName(e.target.value)}
-                    placeholder="e.g., CBA Everyday"
-                  />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label>New Account Name</Label>
+                    <Input
+                      value={newAccountName}
+                      onChange={(e) => setNewAccountName(e.target.value)}
+                      placeholder="e.g., CBA Everyday"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bank</Label>
+                    <Select value={newAccountBank} onValueChange={(value) => setNewAccountBank(value as Bank)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select bank" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CBA">Commonwealth Bank (CBA)</SelectItem>
+                        <SelectItem value="STGEORGE">St.George</SelectItem>
+                        <SelectItem value="OTHER">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      This determines the CSV format for this account
+                    </p>
+                  </div>
+                </>
               )}
 
               <div className="flex gap-2 pt-4">
