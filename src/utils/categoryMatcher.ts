@@ -6,8 +6,8 @@ export function matchCategory(
   type: TransactionType
 ): string | null {
   // Iterate through rules in order (first match wins)
-  // Filter rules by target type
-  const relevantRules = rules.filter(r => r.targetType === type);
+  // Filter rules by target type (include rules with targetType 'ALL' or matching type)
+  const relevantRules = rules.filter(r => r.targetType === 'ALL' || r.targetType === type);
 
   for (const rule of relevantRules) {
     if (rule.matchType === 'contains') {

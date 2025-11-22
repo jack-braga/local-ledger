@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2, ChevronUp, ChevronDown, Edit, CheckCircle2, XCircle } from 'lucide-react';
-import { Category, CategoryRule, TransactionType } from '@/types/finance';
+import { Category, CategoryRule, TransactionType, RuleTargetType } from '@/types/finance';
 import { toast } from '@/hooks/use-toast';
 
 export default function Categories() {
@@ -22,7 +22,6 @@ export default function Categories() {
   
   // Category form state
   const [categoryName, setCategoryName] = useState('');
-  const [categoryType, setCategoryType] = useState<TransactionType>('EXPENSE');
   const [categoryColor, setCategoryColor] = useState('#64748b');
   
   // Rule form state
@@ -30,13 +29,10 @@ export default function Categories() {
   const [ruleMatchType, setRuleMatchType] = useState<'contains' | 'regex'>('contains');
   const [rulePattern, setRulePattern] = useState('');
   const [ruleCaseSensitive, setRuleCaseSensitive] = useState(false);
-  const [ruleTargetType, setRuleTargetType] = useState<TransactionType>('EXPENSE');
+  const [ruleTargetType, setRuleTargetType] = useState<RuleTargetType>('EXPENSE');
   const [testMatchText, setTestMatchText] = useState('');
   const [testMatchResult, setTestMatchResult] = useState<boolean | null>(null);
 
-  const incomeCategories = state.categories.filter(c => c.type === 'INCOME');
-  const expenseCategories = state.categories.filter(c => c.type === 'EXPENSE');
-  const transferCategories = state.categories.filter(c => c.type === 'TRANSFER');
 
   const getCategoryTransactionCount = (categoryId: string) => {
     return state.transactions.filter(t => t.categoryId === categoryId).length;
@@ -55,7 +51,6 @@ export default function Categories() {
   const handleCreateCategory = () => {
     setEditingCategory(null);
     setCategoryName('');
-    setCategoryType('EXPENSE');
     setCategoryColor(`#${Math.floor(Math.random() * 16777215).toString(16)}`);
     setCategoryDialogOpen(true);
   };
@@ -63,7 +58,6 @@ export default function Categories() {
   const handleEditCategory = (category: Category) => {
     setEditingCategory(category);
     setCategoryName(category.name);
-    setCategoryType(category.type);
     setCategoryColor(category.color || '#64748b');
     setCategoryDialogOpen(true);
   };
@@ -84,7 +78,6 @@ export default function Categories() {
         id: editingCategory.id,
         updates: {
           name: categoryName.trim(),
-          type: categoryType,
           color: categoryColor,
         },
       });
@@ -96,7 +89,6 @@ export default function Categories() {
       const newCategory: Category = {
         id: `cat-${Date.now()}`,
         name: categoryName.trim(),
-        type: categoryType,
         color: categoryColor,
       };
       dispatch({ type: 'ADD_CATEGORY', category: newCategory });
@@ -279,11 +271,11 @@ export default function Categories() {
     });
   };
 
-  const CategoryList = ({ categories, type }: { categories: Category[], type: string }) => {
+  const CategoryList = ({ categories }: { categories: Category[] }) => {
     if (categories.length === 0) {
       return (
         <div className="text-center py-12 text-muted-foreground">
-          <p>No {type.toLowerCase()} categories yet.</p>
+          <p>No categories yet.</p>
           <Button onClick={handleCreateCategory} className="mt-4" size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Create Category
@@ -454,24 +446,14 @@ export default function Categories() {
         </Button>
       </div>
 
-      <Tabs defaultValue="expense" className="space-y-6">
+      <Tabs defaultValue="categories" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="expense">Expenses</TabsTrigger>
-          <TabsTrigger value="income">Income</TabsTrigger>
-          <TabsTrigger value="transfer">Transfers</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="rules">Rules</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="expense" className="space-y-4">
-          <CategoryList categories={expenseCategories} type="EXPENSE" />
-        </TabsContent>
-
-        <TabsContent value="income" className="space-y-4">
-          <CategoryList categories={incomeCategories} type="INCOME" />
-        </TabsContent>
-
-        <TabsContent value="transfer" className="space-y-4">
-          <CategoryList categories={transferCategories} type="TRANSFER" />
+        <TabsContent value="categories" className="space-y-4">
+          <CategoryList categories={state.categories} />
         </TabsContent>
 
         <TabsContent value="rules" className="space-y-4">
@@ -494,19 +476,6 @@ export default function Categories() {
                 onChange={(e) => setCategoryName(e.target.value)}
                 placeholder="e.g., Groceries"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="category-type">Type</Label>
-              <Select value={categoryType} onValueChange={(value) => setCategoryType(value as TransactionType)}>
-                <SelectTrigger id="category-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="EXPENSE">Expense</SelectItem>
-                  <SelectItem value="INCOME">Income</SelectItem>
-                  <SelectItem value="TRANSFER">Transfer</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="category-color">Color</Label>
@@ -568,11 +537,12 @@ export default function Categories() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="rule-target-type">Target Transaction Type</Label>
-              <Select value={ruleTargetType} onValueChange={(value) => setRuleTargetType(value as TransactionType)}>
+              <Select value={ruleTargetType} onValueChange={(value) => setRuleTargetType(value as RuleTargetType)}>
                 <SelectTrigger id="rule-target-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="ALL">All Types</SelectItem>
                   <SelectItem value="EXPENSE">Expense</SelectItem>
                   <SelectItem value="INCOME">Income</SelectItem>
                   <SelectItem value="TRANSFER">Transfer</SelectItem>

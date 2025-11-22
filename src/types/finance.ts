@@ -1,4 +1,5 @@
 export type TransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
+export type RuleTargetType = TransactionType | 'ALL';
 
 export type Bank = 'CBA' | 'STGEORGE' | 'OTHER';
 
@@ -28,7 +29,6 @@ export interface Account {
 export interface Category {
   id: string;
   name: string;
-  type: TransactionType;
   color?: string;
   icon?: string;
 }
@@ -38,7 +38,7 @@ export interface CategoryRule {
   matchType: 'contains' | 'regex';
   pattern: string;
   categoryId: string;
-  targetType: TransactionType;
+  targetType: RuleTargetType;
   caseSensitive?: boolean;
 }
 

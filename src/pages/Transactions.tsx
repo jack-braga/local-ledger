@@ -159,13 +159,11 @@ export default function Transactions() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="uncategorized">Uncategorized</SelectItem>
-                              {state.categories
-                                .filter(c => c.type === transaction.type)
-                                .map(cat => (
-                                  <SelectItem key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                  </SelectItem>
-                                ))}
+                              {state.categories.map(cat => (
+                                <SelectItem key={cat.id} value={cat.id}>
+                                  {cat.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </TableCell>
