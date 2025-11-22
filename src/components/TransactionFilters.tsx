@@ -217,7 +217,12 @@ export function TransactionFiltersComponent({ filters, onFiltersChange }: Transa
                   variant={filters.categoryIds.includes(category.id) ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => toggleCategory(category.id)}
+                  className="flex items-center gap-2"
                 >
+                  <div
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: category.color || '#64748b' }}
+                  />
                   {category.name}
                 </Button>
               ))}

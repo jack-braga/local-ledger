@@ -263,13 +263,32 @@ export default function Transactions() {
                             onValueChange={(value) => handleCategoryChange(transaction.id, value)}
                           >
                             <SelectTrigger className="w-[180px] h-8">
-                              <SelectValue />
+                              <SelectValue>
+                                {transaction.categoryId ? (() => {
+                                  const cat = state.categories.find(c => c.id === transaction.categoryId);
+                                  return cat ? (
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="h-3 w-3 rounded-full"
+                                        style={{ backgroundColor: cat.color || '#64748b' }}
+                                      />
+                                      <span>{cat.name}</span>
+                                    </div>
+                                  ) : '-';
+                                })() : '-'}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="uncategorized">-</SelectItem>
                               {state.categories.map(cat => (
                                 <SelectItem key={cat.id} value={cat.id}>
-                                  {cat.name}
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="h-3 w-3 rounded-full"
+                                      style={{ backgroundColor: cat.color || '#64748b' }}
+                                    />
+                                    <span>{cat.name}</span>
+                                  </div>
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -358,13 +377,32 @@ export default function Transactions() {
                 onValueChange={(value) => setNewTransaction({ ...newTransaction, categoryId: value === 'none' ? null : value })}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {newTransaction.categoryId ? (() => {
+                      const cat = state.categories.find(c => c.id === newTransaction.categoryId);
+                      return cat ? (
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-3 w-3 rounded-full"
+                            style={{ backgroundColor: cat.color || '#64748b' }}
+                          />
+                          <span>{cat.name}</span>
+                        </div>
+                      ) : 'None';
+                    })() : 'None'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
                   {state.categories.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: cat.color || '#64748b' }}
+                        />
+                        <span>{cat.name}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -446,13 +484,32 @@ export default function Transactions() {
                 onValueChange={(value) => setEditFormData({ ...editFormData, categoryId: value === 'none' ? null : value })}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {editFormData.categoryId ? (() => {
+                      const cat = state.categories.find(c => c.id === editFormData.categoryId);
+                      return cat ? (
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-3 w-3 rounded-full"
+                            style={{ backgroundColor: cat.color || '#64748b' }}
+                          />
+                          <span>{cat.name}</span>
+                        </div>
+                      ) : 'None';
+                    })() : 'None'}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
                   {state.categories.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: cat.color || '#64748b' }}
+                        />
+                        <span>{cat.name}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
