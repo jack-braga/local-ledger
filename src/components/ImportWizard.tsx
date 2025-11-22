@@ -191,8 +191,8 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
         originalData: importedTxn.rawData,
       };
 
-      // Auto-categorize
-      const categoryId = autoCategorizeTransaction(transaction, state.categories);
+      // Auto-categorize using top-level rules
+      const categoryId = autoCategorizeTransaction(transaction, state.rules);
       if (categoryId) {
         transaction.categoryId = categoryId;
       }

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { AppState, Transaction, Account, Category, TransactionType } from '@/types/finance';
-import { defaultCategories } from '@/lib/defaultCategories';
+import { AppState, Transaction, Account, Category, CategoryRule, TransactionType } from '@/types/finance';
 
 type Action =
   | { type: 'ADD_TRANSACTIONS'; transactions: Transaction[] }
@@ -13,13 +12,18 @@ type Action =
   | { type: 'ADD_CATEGORY'; category: Category }
   | { type: 'UPDATE_CATEGORY'; id: string; updates: Partial<Category> }
   | { type: 'DELETE_CATEGORY'; id: string }
+  | { type: 'ADD_RULE'; rule: CategoryRule }
+  | { type: 'UPDATE_RULE'; id: string; updates: Partial<CategoryRule> }
+  | { type: 'DELETE_RULE'; id: string }
+  | { type: 'REORDER_RULES'; ruleIds: string[] }
   | { type: 'IMPORT_STATE'; state: AppState }
   | { type: 'RESET_STATE' };
 
 const initialState: AppState = {
   transactions: [],
   accounts: [],
-  categories: defaultCategories,
+  categories: [],
+  rules: [],
   version: '1.0.0',
   lastModified: new Date().toISOString(),
 };
@@ -46,18 +50,12 @@ function financeReducer(state: AppState, action: Action): AppState {
           ...state,
           transactions: state.transactions.map(t => {
             if (t.id === action.id) {
-              // Find the category to check if it's Refunds
-              const category = state.categories.find(c => c.id === t.categoryId);
-              const isRefundCategory = category?.id === 'cat-refund';
-              
               // Update Date and Description from CSV (source of truth)
               // PRESERVE Category, Notes, and other user-entered data
               const updated: Transaction = {
                 ...t,
                 date: action.csvData.date,
                 description: action.csvData.description,
-                // Force type to EXPENSE if category is Refunds (even if amount is positive)
-                type: isRefundCategory ? 'EXPENSE' : t.type,
               };
               
               return updated;
@@ -111,6 +109,41 @@ function financeReducer(state: AppState, action: Action): AppState {
         return {
           ...state,
           categories: state.categories.filter(c => c.id !== action.id),
+          // Cascade delete: remove all rules associated with this category
+          rules: state.rules.filter(r => r.categoryId !== action.id),
+        };
+      
+      case 'ADD_RULE':
+        return {
+          ...state,
+          rules: [...state.rules, action.rule],
+        };
+      
+      case 'UPDATE_RULE':
+        return {
+          ...state,
+          rules: state.rules.map(r =>
+            r.id === action.id ? { ...r, ...action.updates } : r
+          ),
+        };
+      
+      case 'DELETE_RULE':
+        return {
+          ...state,
+          rules: state.rules.filter(r => r.id !== action.id),
+        };
+      
+      case 'REORDER_RULES':
+        // Reorder rules based on the provided array of rule IDs
+        const ruleMap = new Map(state.rules.map(r => [r.id, r]));
+        const reorderedRules = action.ruleIds
+          .map(id => ruleMap.get(id))
+          .filter((rule): rule is CategoryRule => rule !== undefined);
+        // Add any rules that weren't in the reorder list (shouldn't happen, but safety)
+        const remainingRules = state.rules.filter(r => !action.ruleIds.includes(r.id));
+        return {
+          ...state,
+          rules: [...reorderedRules, ...remainingRules],
         };
       
       case 'IMPORT_STATE':

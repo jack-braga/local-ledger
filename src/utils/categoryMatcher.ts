@@ -1,33 +1,38 @@
-import { Category, Transaction, TransactionType } from '@/types/finance';
+import { CategoryRule, Transaction, TransactionType } from '@/types/finance';
 
 export function matchCategory(
   description: string,
-  categories: Category[],
+  rules: CategoryRule[],
   type: TransactionType
 ): string | null {
-  // Filter categories by type
-  const relevantCategories = categories.filter(c => c.type === type);
+  // Iterate through rules in order (first match wins)
+  // Filter rules by target type
+  const relevantRules = rules.filter(r => r.targetType === type);
 
-  for (const category of relevantCategories) {
-    for (const rule of category.rules) {
-      if (rule.targetType !== type) continue;
-
-      const descLower = rule.caseSensitive ? description : description.toLowerCase();
-      const pattern = rule.caseSensitive ? rule.pattern : rule.pattern.toLowerCase();
-
-      if (rule.matchType === 'contains') {
-        if (descLower.includes(pattern)) {
-          return category.id;
+  for (const rule of relevantRules) {
+    if (rule.matchType === 'contains') {
+      // String matching with case sensitivity
+      if (rule.caseSensitive) {
+        if (description.includes(rule.pattern)) {
+          return rule.categoryId;
         }
-      } else if (rule.matchType === 'regex') {
-        try {
-          const regex = new RegExp(pattern, rule.caseSensitive ? '' : 'i');
-          if (regex.test(description)) {
-            return category.id;
-          }
-        } catch (error) {
-          console.error('Invalid regex pattern:', pattern, error);
+      } else {
+        if (description.toLowerCase().includes(rule.pattern.toLowerCase())) {
+          return rule.categoryId;
         }
+      }
+    } else if (rule.matchType === 'regex') {
+      // Regex matching with case sensitivity (using 'i' flag when not case sensitive)
+      try {
+        const flags = rule.caseSensitive ? '' : 'i';
+        const regex = new RegExp(rule.pattern, flags);
+        if (regex.test(description)) {
+          return rule.categoryId;
+        }
+      } catch (error) {
+        // Invalid regex pattern - skip this rule
+        console.error('Invalid regex pattern:', rule.pattern, error);
+        continue;
       }
     }
   }
@@ -37,24 +42,10 @@ export function matchCategory(
 
 export function autoCategorizeTransaction(
   transaction: Transaction,
-  categories: Category[]
+  rules: CategoryRule[]
 ): string | null {
-  // Check for refunds first (positive amount + refund keywords -> Negative Expense)
-  if (transaction.amount > 0) {
-    const refundKeywords = ['refund', 'reversal', 'reversed', 'credit', 'return', 'chargeback'];
-    const descriptionLower = transaction.description.toLowerCase();
-    
-    if (refundKeywords.some(keyword => descriptionLower.includes(keyword))) {
-      // Find the Refunds category (should be EXPENSE type)
-      const refundCategory = categories.find(c => c.id === 'cat-refund' && c.type === 'EXPENSE');
-      if (refundCategory) {
-        return refundCategory.id;
-      }
-    }
-  }
-  
-  // Use standard category matching
-  return matchCategory(transaction.description, categories, transaction.type);
+  // Use standard category matching with top-level rules
+  return matchCategory(transaction.description, rules, transaction.type);
 }
 
 export function inferTransactionType(amount: number, description: string): TransactionType {

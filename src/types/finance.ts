@@ -31,7 +31,6 @@ export interface Category {
   type: TransactionType;
   color?: string;
   icon?: string;
-  rules: CategoryRule[];
 }
 
 export interface CategoryRule {
@@ -47,6 +46,7 @@ export interface AppState {
   transactions: Transaction[];
   accounts: Account[];
   categories: Category[];
+  rules: CategoryRule[];
   version: string;
   lastModified: string;
 }
