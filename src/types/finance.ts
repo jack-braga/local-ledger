@@ -1,4 +1,4 @@
-export type TransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
+export type TransactionType = 'INCOME' | 'EXPENSE';
 export type RuleTargetType = TransactionType | 'ALL';
 
 export type Bank = 'CBA' | 'STGEORGE' | 'OTHER';
@@ -7,11 +7,10 @@ export interface Transaction {
   id: string;
   date: string; // ISO date string
   description: string;
-  amount: number;
+  amount: number; // Positive = income, negative = expense
   currency: string;
   categoryId: string | null;
   accountId: string;
-  type: TransactionType;
   isManualEntry: boolean;
   notes?: string;
   originalData?: Record<string, string>; // Raw CSV row for debugging

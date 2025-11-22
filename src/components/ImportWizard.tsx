@@ -8,7 +8,7 @@ import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { Account, Transaction, ImportedTransaction, PotentialDuplicate, Bank, CSVColumnMapping } from '@/types/finance';
 import { parseCSV, detectColumns, getBankColumnMapping, findPotentialDuplicates } from '@/utils/csvParser';
-import { inferTransactionType, autoCategorizeTransaction } from '@/utils/categoryMatcher';
+import { autoCategorizeTransaction } from '@/utils/categoryMatcher';
 import { MergeTransactionDialog } from '@/components/MergeTransactionDialog';
 import { toast } from '@/hooks/use-toast';
 
@@ -176,7 +176,6 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
       }
 
       const importedTxn = imported[i];
-      const type = inferTransactionType(importedTxn.amount, importedTxn.description);
       
       const transaction: Transaction = {
         id: `txn-${Date.now()}-${i}`,
@@ -185,7 +184,6 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
         amount: importedTxn.amount,
         currency: 'AUD',
         accountId,
-        type,
         categoryId: null,
         isManualEntry: false,
         originalData: importedTxn.rawData,

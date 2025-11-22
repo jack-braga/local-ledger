@@ -1,24 +1,22 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Transaction, Category } from '@/types/finance';
+import { getTransactionType } from '@/utils/categoryMatcher';
 
 interface CategorySpendingChartProps {
   transactions: Transaction[];
   categories: Category[];
-  excludeTransfers: boolean;
 }
 
 export function CategorySpendingChart({
   transactions,
   categories,
-  excludeTransfers,
 }: CategorySpendingChartProps) {
   const chartData = useMemo(() => {
-    // Filter transactions: only EXPENSE type, exclude TRANSFER if toggle is on
+    // Filter transactions: only EXPENSE type (negative amounts)
     let filtered = transactions.filter(t => {
-      // Only include EXPENSE transactions
-      if (t.type !== 'EXPENSE') return false;
-      // No need to exclude TRANSFER, as EXPENSE and TRANSFER are mutually exclusive types
+      // Only include EXPENSE transactions (negative amounts)
+      if (getTransactionType(t.amount) !== 'EXPENSE') return false;
       return true;
     });
 
@@ -54,7 +52,7 @@ export function CategorySpendingChart({
       .slice(0, 10); // Top 10 categories
 
     return data;
-  }, [transactions, categories, excludeTransfers]);
+  }, [transactions, categories]);
 
   if (chartData.length === 0) {
     return (

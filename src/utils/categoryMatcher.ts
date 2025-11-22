@@ -1,5 +1,12 @@
 import { CategoryRule, Transaction, TransactionType } from '@/types/finance';
 
+/**
+ * Derives transaction type from amount: positive = INCOME, negative = EXPENSE
+ */
+export function getTransactionType(amount: number): TransactionType {
+  return amount >= 0 ? 'INCOME' : 'EXPENSE';
+}
+
 export function matchCategory(
   description: string,
   rules: CategoryRule[],
@@ -44,25 +51,8 @@ export function autoCategorizeTransaction(
   transaction: Transaction,
   rules: CategoryRule[]
 ): string | null {
-  // Use standard category matching with top-level rules
-  return matchCategory(transaction.description, rules, transaction.type);
+  // Derive type from amount and use standard category matching
+  const type = getTransactionType(transaction.amount);
+  return matchCategory(transaction.description, rules, type);
 }
 
-export function inferTransactionType(amount: number, description: string): TransactionType {
-  // Positive amounts are typically income or refunds
-  if (amount > 0) {
-    // Check for transfer keywords
-    const transferKeywords = ['transfer', 'xfer', 'payment sent'];
-    if (transferKeywords.some(kw => description.toLowerCase().includes(kw))) {
-      return 'TRANSFER';
-    }
-    return 'INCOME';
-  } else {
-    // Negative amounts are expenses or transfers
-    const transferKeywords = ['transfer', 'xfer', 'payment received'];
-    if (transferKeywords.some(kw => description.toLowerCase().includes(kw))) {
-      return 'TRANSFER';
-    }
-    return 'EXPENSE';
-  }
-}

@@ -30,7 +30,6 @@ export function MergeTransactionDialog({
     switch (type) {
       case 'INCOME': return 'bg-success/10 text-success border-success/20';
       case 'EXPENSE': return 'bg-destructive/10 text-destructive border-destructive/20';
-      case 'TRANSFER': return 'bg-accent/10 text-accent border-accent/20';
       default: return 'bg-muted text-muted-foreground';
     }
   };

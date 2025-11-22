@@ -12,7 +12,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { Search, MoreVertical, Plus, Edit, Trash2 } from 'lucide-react';
-import { Transaction, TransactionType } from '@/types/finance';
+import { Transaction } from '@/types/finance';
+import { getTransactionType } from '@/utils/categoryMatcher';
 
 export default function Transactions() {
   const { state, dispatch } = useFinance();
@@ -26,7 +27,6 @@ export default function Transactions() {
   const [editFormData, setEditFormData] = useState<Partial<Transaction>>({});
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     date: new Date().toISOString().split('T')[0],
-    type: 'EXPENSE',
     amount: 0,
     currency: 'USD',
     accountId: state.accounts[0]?.id || '',
@@ -43,7 +43,10 @@ export default function Transactions() {
             return false;
           }
         }
-        if (filterType !== 'all' && t.type !== filterType) return false;
+        if (filterType !== 'all') {
+          const transactionType = getTransactionType(t.amount);
+          if (transactionType !== filterType) return false;
+        }
         if (filterAccount !== 'all' && t.accountId !== filterAccount) return false;
         return true;
       })
@@ -67,7 +70,6 @@ export default function Transactions() {
       date: dateStr,
       description: transaction.description,
       amount: transaction.amount,
-      type: transaction.type,
       accountId: transaction.accountId,
       categoryId: transaction.categoryId,
     });
@@ -114,7 +116,6 @@ export default function Transactions() {
         description: newTransaction.description || '',
         amount: newTransaction.amount || 0,
         currency: newTransaction.currency || 'USD',
-        type: (newTransaction.type as TransactionType) || 'EXPENSE',
         accountId: newTransaction.accountId,
         categoryId: newTransaction.categoryId || null,
         isManualEntry: true,
@@ -123,7 +124,6 @@ export default function Transactions() {
       setIsAddDialogOpen(false);
       setNewTransaction({
         date: new Date().toISOString().split('T')[0],
-        type: 'EXPENSE',
         amount: 0,
         currency: 'USD',
         accountId: state.accounts[0]?.id || '',
@@ -137,7 +137,6 @@ export default function Transactions() {
     switch (type) {
       case 'INCOME': return 'bg-success/10 text-success border-success/20';
       case 'EXPENSE': return 'bg-destructive/10 text-destructive border-destructive/20';
-      case 'TRANSFER': return 'bg-accent/10 text-accent border-accent/20';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -174,7 +173,6 @@ export default function Transactions() {
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="INCOME">Income</SelectItem>
               <SelectItem value="EXPENSE">Expense</SelectItem>
-              <SelectItem value="TRANSFER">Transfer</SelectItem>
             </SelectContent>
           </Select>
 
@@ -270,8 +268,8 @@ export default function Transactions() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={getTypeColor(transaction.type)}>
-                            {transaction.type}
+                          <Badge variant="outline" className={getTypeColor(getTransactionType(transaction.amount))}>
+                            {getTransactionType(transaction.amount)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -283,7 +281,7 @@ export default function Transactions() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="uncategorized">Uncategorized</SelectItem>
+                              <SelectItem value="uncategorized">-</SelectItem>
                               {state.categories.map(cat => (
                                 <SelectItem key={cat.id} value={cat.id}>
                                   {cat.name}
@@ -349,22 +347,6 @@ export default function Transactions() {
                 onChange={(e) => setNewTransaction({ ...newTransaction, amount: parseFloat(e.target.value) || 0 })}
                 placeholder="0.00"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-type">Type</Label>
-              <Select
-                value={newTransaction.type || 'EXPENSE'}
-                onValueChange={(value) => setNewTransaction({ ...newTransaction, type: value as TransactionType })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="INCOME">Income</SelectItem>
-                  <SelectItem value="EXPENSE">Expense</SelectItem>
-                  <SelectItem value="TRANSFER">Transfer</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-account">Account</Label>
@@ -453,22 +435,6 @@ export default function Transactions() {
                 onChange={(e) => setEditFormData({ ...editFormData, amount: parseFloat(e.target.value) || 0 })}
                 placeholder="0.00"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-type">Type</Label>
-              <Select
-                value={editFormData.type || 'EXPENSE'}
-                onValueChange={(value) => setEditFormData({ ...editFormData, type: value as TransactionType })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="INCOME">Income</SelectItem>
-                  <SelectItem value="EXPENSE">Expense</SelectItem>
-                  <SelectItem value="TRANSFER">Transfer</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-account">Account</Label>

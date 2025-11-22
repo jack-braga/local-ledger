@@ -1,34 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, CreditCard, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, CreditCard } from 'lucide-react';
 import { NetWorthChart } from '@/components/NetWorthChart';
 import { CategorySpendingChart } from '@/components/CategorySpendingChart';
-import { detectOrphanTransfers } from '@/utils/orphanTransferDetection';
+import { getTransactionType } from '@/utils/categoryMatcher';
 
 export default function Dashboard() {
   const { state } = useFinance();
-  const [excludeTransfers, setExcludeTransfers] = useState(true);
-
-  // Detect orphan transfers
-  const orphanTransferCount = useMemo(() => {
-    return detectOrphanTransfers(state.transactions).length;
-  }, [state.transactions]);
 
   // Calculate stats with proper refund handling
   const stats = useMemo(() => {
-    // Filter transactions based on excludeTransfers toggle
-    let filteredTransactions = state.transactions;
-    if (excludeTransfers) {
-      filteredTransactions = filteredTransactions.filter(t => t.type !== 'TRANSFER');
-    }
-
-    let incomeTransactions = filteredTransactions.filter(t => t.type === 'INCOME');
-    let expenseTransactions = filteredTransactions.filter(t => t.type === 'EXPENSE');
+    let incomeTransactions = state.transactions.filter(t => getTransactionType(t.amount) === 'INCOME');
+    let expenseTransactions = state.transactions.filter(t => getTransactionType(t.amount) === 'EXPENSE');
 
     // Income: sum all positive amounts
     const income = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -64,18 +49,12 @@ export default function Dashboard() {
       totalTransactions: state.transactions.length,
       uncategorized: state.transactions.filter(t => !t.categoryId).length,
     };
-  }, [state.transactions, excludeTransfers]);
+  }, [state.transactions]);
 
   // Income vs Expense data for donut chart
   const incomeExpenseData = useMemo(() => {
-    // Filter transactions based on excludeTransfers toggle
-    let filteredTransactions = state.transactions;
-    if (excludeTransfers) {
-      filteredTransactions = filteredTransactions.filter(t => t.type !== 'TRANSFER');
-    }
-
-    let incomeTransactions = filteredTransactions.filter(t => t.type === 'INCOME');
-    let expenseTransactions = filteredTransactions.filter(t => t.type === 'EXPENSE');
+    let incomeTransactions = state.transactions.filter(t => getTransactionType(t.amount) === 'INCOME');
+    let expenseTransactions = state.transactions.filter(t => getTransactionType(t.amount) === 'EXPENSE');
 
     // Income: sum all positive amounts
     const income = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -96,40 +75,14 @@ export default function Dashboard() {
         color: '#ef4444', // destructive color
       },
     ].filter(item => item.value > 0);
-  }, [state.transactions, excludeTransfers]);
+  }, [state.transactions]);
 
   return (
     <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Your financial overview</p>
-        </div>
-
-        {/* Exclude Transfers Toggle */}
-        <div className="flex items-center gap-2">
-          <Switch
-            id="exclude-transfers"
-            checked={excludeTransfers}
-            onCheckedChange={setExcludeTransfers}
-          />
-          <Label htmlFor="exclude-transfers" className="cursor-pointer">
-            Exclude Transfers
-          </Label>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground mt-1">Your financial overview</p>
       </div>
-
-      {/* Orphan Transfer Alert */}
-      {orphanTransferCount > 0 && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Orphaned Transfers Detected</AlertTitle>
-          <AlertDescription>
-            {orphanTransferCount} orphaned transfer{orphanTransferCount !== 1 ? 's' : ''} found. 
-            Review them to ensure your Net Worth is accurate.
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -204,7 +157,6 @@ export default function Dashboard() {
             <CategorySpendingChart
               transactions={state.transactions}
               categories={state.categories}
-              excludeTransfers={excludeTransfers}
             />
           </CardContent>
         </Card>

@@ -545,7 +545,6 @@ export default function Categories() {
                   <SelectItem value="ALL">All Types</SelectItem>
                   <SelectItem value="EXPENSE">Expense</SelectItem>
                   <SelectItem value="INCOME">Income</SelectItem>
-                  <SelectItem value="TRANSFER">Transfer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
