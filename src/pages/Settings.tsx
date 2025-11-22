@@ -29,23 +29,33 @@ export default function Settings() {
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountColor, setNewAccountColor] = useState('#3b82f6');
   const [newAccountBank, setNewAccountBank] = useState<Bank>('OTHER');
+  const [newAccountStartingBalance, setNewAccountStartingBalance] = useState('');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedImportFile, setSelectedImportFile] = useState<File | null>(null);
 
   const handleCreateAccount = () => {
     if (!newAccountName.trim()) return;
 
+    // Validate starting balance
+    const startingBalance = parseFloat(newAccountStartingBalance);
+    if (isNaN(startingBalance)) {
+      alert('Please enter a valid starting balance.');
+      return;
+    }
+
     const newAccount: Account = {
       id: `acc-${Date.now()}`,
       name: newAccountName.trim(),
       color: newAccountColor,
       bankId: newAccountBank,
+      balance: startingBalance,
     };
 
     dispatch({ type: 'ADD_ACCOUNT', account: newAccount });
     setNewAccountName('');
     setNewAccountColor('#3b82f6');
     setNewAccountBank('OTHER');
+    setNewAccountStartingBalance('');
     setAccountDialogOpen(false);
   };
 
@@ -105,9 +115,12 @@ export default function Settings() {
   };
 
   const getAccountBalance = (accountId: string) => {
-    return state.transactions
+    const account = state.accounts.find(a => a.id === accountId);
+    const startingBalance = account?.balance ?? 0;
+    const transactionTotal = state.transactions
       .filter(t => t.accountId === accountId)
       .reduce((sum, t) => sum + t.amount, 0);
+    return startingBalance + transactionTotal;
   };
 
   const getAccountTransactionCount = (accountId: string) => {
@@ -181,6 +194,21 @@ export default function Settings() {
                         className="flex-1 font-mono"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="starting-balance">Starting Balance *</Label>
+                    <Input
+                      id="starting-balance"
+                      type="number"
+                      step="0.01"
+                      value={newAccountStartingBalance}
+                      onChange={(e) => setNewAccountStartingBalance(e.target.value)}
+                      placeholder="0.00"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter the current balance of this account
+                    </p>
                   </div>
                   <Button onClick={handleCreateAccount} className="w-full">
                     Create Account

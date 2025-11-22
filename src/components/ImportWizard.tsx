@@ -23,6 +23,7 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountBank, setNewAccountBank] = useState<Bank>('OTHER');
+  const [newAccountStartingBalance, setNewAccountStartingBalance] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'upload' | 'account' | 'processing' | 'merging'>('upload');
   
@@ -57,11 +58,23 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
 
     // Create new account if needed
     if (isNewAccount && newAccountName.trim()) {
+      // Validate starting balance
+      const startingBalance = parseFloat(newAccountStartingBalance);
+      if (isNaN(startingBalance)) {
+        toast({
+          title: 'Starting balance required',
+          description: 'Please enter a valid starting balance for the new account.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const newAccount: Account = {
         id: `acc-${Date.now()}`,
         name: newAccountName.trim(),
         color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
         bankId: newAccountBank,
+        balance: startingBalance,
       };
       dispatch({ type: 'ADD_ACCOUNT', account: newAccount });
       accountId = newAccount.id;
@@ -283,6 +296,7 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
     setSelectedAccountId('');
     setNewAccountName('');
     setNewAccountBank('OTHER');
+    setNewAccountStartingBalance('');
     setStep('upload');
     setIsProcessing(false);
     setMergeDialogOpen(false);
@@ -389,6 +403,21 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
                     </Select>
                     <p className="text-xs text-muted-foreground">
                       This determines the CSV format for this account
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="import-starting-balance">Starting Balance *</Label>
+                    <Input
+                      id="import-starting-balance"
+                      type="number"
+                      step="0.01"
+                      value={newAccountStartingBalance}
+                      onChange={(e) => setNewAccountStartingBalance(e.target.value)}
+                      placeholder="0.00"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter the current balance of this account
                     </p>
                   </div>
                 </>
