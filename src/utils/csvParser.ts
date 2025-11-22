@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
-import { parse, isValid } from 'date-fns';
-import { CSVColumnMapping, ImportedTransaction } from '@/types/finance';
+import { parse, isValid, differenceInDays } from 'date-fns';
+import { CSVColumnMapping, ImportedTransaction, Transaction, PotentialDuplicate } from '@/types/finance';
 
 const DATE_FORMATS = [
   'dd/MM/yyyy',
@@ -95,42 +95,57 @@ export async function parseCSV(
           const transactions: ImportedTransaction[] = [];
 
           for (const row of results.data as Record<string, string>[]) {
-            // Extract date
-            const dateStr = columnMapping.dateColumn ? row[columnMapping.dateColumn] : null;
-            if (!dateStr) continue;
-            
-            const date = parseDate(dateStr);
-            if (!date) continue;
+            try {
+              // Extract date
+              const dateStr = columnMapping.dateColumn ? row[columnMapping.dateColumn] : null;
+              if (!dateStr || typeof dateStr !== 'string') continue;
+              
+              const date = parseDate(dateStr);
+              if (!date) continue;
 
-            // Extract description
-            const description = columnMapping.descriptionColumn
-              ? row[columnMapping.descriptionColumn]
-              : 'Unknown';
+              // Extract description
+              const description = columnMapping.descriptionColumn
+                ? (row[columnMapping.descriptionColumn] || 'Unknown')
+                : 'Unknown';
 
-            // Extract amount
-            let amount = 0;
-            
-            if (columnMapping.amountColumn) {
-              // Scenario A: Single amount column
-              const amountStr = row[columnMapping.amountColumn];
-              amount = parseAmount(amountStr);
-            } else if (columnMapping.debitColumn && columnMapping.creditColumn) {
-              // Scenario B: Separate debit/credit columns
-              const debitStr = row[columnMapping.debitColumn] || '0';
-              const creditStr = row[columnMapping.creditColumn] || '0';
-              const debit = parseAmount(debitStr);
-              const credit = parseAmount(creditStr);
-              amount = credit - debit; // Credit is positive, debit is negative
-            } else {
-              continue; // Cannot determine amount
+              // Extract amount
+              let amount = 0;
+              
+              if (columnMapping.amountColumn) {
+                // Scenario A: Single amount column
+                const amountStr = row[columnMapping.amountColumn];
+                if (amountStr && typeof amountStr === 'string') {
+                  amount = parseAmount(amountStr);
+                } else {
+                  continue; // Skip if amount is invalid
+                }
+              } else if (columnMapping.debitColumn && columnMapping.creditColumn) {
+                // Scenario B: Separate debit/credit columns
+                const debitStr = row[columnMapping.debitColumn] || '0';
+                const creditStr = row[columnMapping.creditColumn] || '0';
+                const debit = parseAmount(debitStr);
+                const credit = parseAmount(creditStr);
+                amount = credit - debit; // Credit is positive, debit is negative
+              } else {
+                continue; // Cannot determine amount
+              }
+
+              // Validate amount is a valid number
+              if (isNaN(amount) || !isFinite(amount)) {
+                continue; // Skip invalid amounts
+              }
+
+              transactions.push({
+                date,
+                description: description.trim(),
+                amount,
+                rawData: row,
+              });
+            } catch (error) {
+              // Skip malformed rows instead of crashing
+              console.warn('Skipping malformed CSV row:', error, row);
+              continue;
             }
-
-            transactions.push({
-              date,
-              description: description.trim(),
-              amount,
-              rawData: row,
-            });
           }
 
           resolve(transactions);
@@ -145,6 +160,53 @@ export async function parseCSV(
   });
 }
 
+/**
+ * Enhanced duplicate detection: Finds potential duplicates based on:
+ * - Same Amount (within 0.01 tolerance)
+ * - Date within ±1 day
+ * - Same Account
+ */
+export function findPotentialDuplicates(
+  existingTransactions: Transaction[],
+  newTransactions: ImportedTransaction[],
+  accountId: string
+): PotentialDuplicate[] {
+  const potentialDuplicates: PotentialDuplicate[] = [];
+
+  for (let i = 0; i < newTransactions.length; i++) {
+    const newTxn = newTransactions[i];
+    const newDate = new Date(newTxn.date);
+
+    for (const existingTxn of existingTransactions) {
+      // Match criteria: same account, same amount, date within ±1 day
+      const sameAccount = existingTxn.accountId === accountId;
+      const sameAmount = Math.abs(existingTxn.amount - newTxn.amount) < 0.01;
+      
+      if (sameAccount && sameAmount) {
+        const existingDate = new Date(existingTxn.date);
+        const dateDiff = Math.abs(differenceInDays(newDate, existingDate));
+        
+        // Date within ±1 day
+        if (dateDiff <= 1) {
+          potentialDuplicates.push({
+            existingTransaction: existingTxn,
+            newTransaction: newTxn,
+            newTransactionIndex: i,
+          });
+          // Only match to the first potential duplicate found
+          break;
+        }
+      }
+    }
+  }
+
+  return potentialDuplicates;
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use findPotentialDuplicates instead
+ */
 export function findDuplicates(
   existingTransactions: any[],
   newTransactions: ImportedTransaction[]

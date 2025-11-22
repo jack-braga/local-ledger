@@ -69,3 +69,9 @@ export interface DuplicateMatch {
   newTransaction: ImportedTransaction;
   confidence: number;
 }
+
+export interface PotentialDuplicate {
+  existingTransaction: Transaction;
+  newTransaction: ImportedTransaction;
+  newTransactionIndex: number;
+}

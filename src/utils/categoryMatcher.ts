@@ -39,6 +39,21 @@ export function autoCategorizeTransaction(
   transaction: Transaction,
   categories: Category[]
 ): string | null {
+  // Check for refunds first (positive amount + refund keywords -> Negative Expense)
+  if (transaction.amount > 0) {
+    const refundKeywords = ['refund', 'reversal', 'reversed', 'credit', 'return', 'chargeback'];
+    const descriptionLower = transaction.description.toLowerCase();
+    
+    if (refundKeywords.some(keyword => descriptionLower.includes(keyword))) {
+      // Find the Refunds category (should be EXPENSE type)
+      const refundCategory = categories.find(c => c.id === 'cat-refund' && c.type === 'EXPENSE');
+      if (refundCategory) {
+        return refundCategory.id;
+      }
+    }
+  }
+  
+  // Use standard category matching
   return matchCategory(transaction.description, categories, transaction.type);
 }
 

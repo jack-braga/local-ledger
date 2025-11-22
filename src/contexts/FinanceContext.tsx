@@ -6,6 +6,7 @@ type Action =
   | { type: 'ADD_TRANSACTIONS'; transactions: Transaction[] }
   | { type: 'UPDATE_TRANSACTION'; id: string; updates: Partial<Transaction> }
   | { type: 'DELETE_TRANSACTION'; id: string }
+  | { type: 'MERGE_TRANSACTION'; id: string; csvData: { date: string; description: string } }
   | { type: 'ADD_ACCOUNT'; account: Account }
   | { type: 'UPDATE_ACCOUNT'; id: string; updates: Partial<Account> }
   | { type: 'DELETE_ACCOUNT'; id: string }
@@ -39,6 +40,32 @@ function financeReducer(state: AppState, action: Action): AppState {
             t.id === action.id ? { ...t, ...action.updates } : t
           ),
         };
+      
+      case 'MERGE_TRANSACTION': {
+        return {
+          ...state,
+          transactions: state.transactions.map(t => {
+            if (t.id === action.id) {
+              // Find the category to check if it's Refunds
+              const category = state.categories.find(c => c.id === t.categoryId);
+              const isRefundCategory = category?.id === 'cat-refund';
+              
+              // Update Date and Description from CSV (source of truth)
+              // PRESERVE Category, Notes, and other user-entered data
+              const updated: Transaction = {
+                ...t,
+                date: action.csvData.date,
+                description: action.csvData.description,
+                // Force type to EXPENSE if category is Refunds (even if amount is positive)
+                type: isRefundCategory ? 'EXPENSE' : t.type,
+              };
+              
+              return updated;
+            }
+            return t;
+          }),
+        };
+      }
       
       case 'DELETE_TRANSACTION':
         return {

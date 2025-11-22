@@ -19,7 +19,7 @@ export const defaultCategories: Category[] = [
   {
     id: 'cat-refund',
     name: 'Refunds',
-    type: 'INCOME',
+    type: 'EXPENSE',
     color: '#06b6d4',
     rules: [],
   },
@@ -161,6 +161,13 @@ export const defaultCategories: Category[] = [
     name: 'Other Expenses',
     type: 'EXPENSE',
     color: '#64748b',
+    rules: [],
+  },
+  {
+    id: 'cat-gifts-loans',
+    name: 'Gifts/Loans',
+    type: 'EXPENSE',
+    color: '#f97316',
     rules: [],
   },
 
