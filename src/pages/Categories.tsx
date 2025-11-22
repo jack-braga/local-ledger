@@ -276,7 +276,7 @@ export default function Categories() {
       return (
         <div className="text-center py-12 text-muted-foreground">
           <p>No categories yet.</p>
-          <Button onClick={handleCreateCategory} className="mt-4" size="sm">
+          <Button onClick={handleCreateCategory} className="mt-4 animate-wiggle" size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Create Category
           </Button>
@@ -344,7 +344,7 @@ export default function Categories() {
       return (
         <div className="text-center py-12 text-muted-foreground">
           <p>No rules yet. Create rules to automatically categorize transactions.</p>
-          <Button onClick={handleCreateRule} className="mt-4" size="sm">
+          <Button onClick={handleCreateRule} className="mt-4 animate-wiggle" size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Create Rule
           </Button>

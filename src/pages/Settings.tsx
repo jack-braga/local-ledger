@@ -131,7 +131,7 @@ export default function Settings() {
             </div>
             <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className={state.accounts.length === 0 ? "animate-wiggle" : ""}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Account
                 </Button>

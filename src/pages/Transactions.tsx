@@ -153,7 +153,7 @@ export default function Transactions() {
           <h1 className="text-3xl font-bold">Transactions</h1>
           <p className="text-muted-foreground mt-1">View and categorize your transactions</p>
         </div>
-        <Button onClick={() => setImportOpen(true)}>
+        <Button onClick={() => setImportOpen(true)} className={state.transactions.length === 0 ? "animate-wiggle" : ""}>
           <Upload className="h-4 w-4 mr-2" />
           Import CSV
         </Button>
