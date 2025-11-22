@@ -20,7 +20,6 @@ export interface Account {
   id: string;
   name: string;
   color: string;
-  balance?: number;
   institution?: string;
   bankId?: Bank; // Bank identifier for CSV parsing
 }
