@@ -54,7 +54,7 @@ export default function Transactions() {
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [rawSelectedIds, setRawSelectedIds] = useState<Set<string>>(new Set());
   const [bulkCategoryId, setBulkCategoryId] = useState<string | null>(null);
   const [isCompressed, setIsCompressed] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<Transaction>>({});
@@ -93,40 +93,60 @@ export default function Transactions() {
     return new Map(state.categories.map(c => [c.id, c]));
   }, [state.categories]);
 
+  // Derived state: Compute valid selection as intersection of raw selection and visible transactions
+  const validSelection = useMemo(() => {
+    const visibleIds = new Set(filteredTransactions.map(t => t.id));
+    // Intersection: Keep only IDs that are present in BOTH sets
+    return new Set([...rawSelectedIds].filter(id => visibleIds.has(id)));
+  }, [rawSelectedIds, filteredTransactions]);
+
   // Selection helper functions
   const isAllSelected = useMemo(() => {
-    return filteredTransactions.length > 0 && filteredTransactions.every(t => selectedIds.has(t.id));
-  }, [filteredTransactions, selectedIds]);
+    return filteredTransactions.length > 0 && validSelection.size === filteredTransactions.length;
+  }, [filteredTransactions, validSelection]);
 
   const isIndeterminate = useMemo(() => {
-    const selectedCount = filteredTransactions.filter(t => selectedIds.has(t.id)).length;
-    return selectedCount > 0 && selectedCount < filteredTransactions.length;
-  }, [filteredTransactions, selectedIds]);
+    return validSelection.size > 0 && validSelection.size < filteredTransactions.length;
+  }, [filteredTransactions, validSelection]);
+
+  // Explicit action handlers: Reset selection when view changes
+  const handleFilterChange = (newFilters: TransactionFilters) => {
+    setFilters(newFilters);
+    setRawSelectedIds(new Set()); // Explicitly reset selection
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+    setRawSelectedIds(new Set()); // Explicitly reset selection
+  };
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      const newSelectedIds = new Set(selectedIds);
-      filteredTransactions.forEach(t => newSelectedIds.add(t.id));
-      setSelectedIds(newSelectedIds);
-    } else {
-      const newSelectedIds = new Set(selectedIds);
-      filteredTransactions.forEach(t => newSelectedIds.delete(t.id));
-      setSelectedIds(newSelectedIds);
-    }
+    setRawSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        filteredTransactions.forEach(t => next.add(t.id));
+      } else {
+        filteredTransactions.forEach(t => next.delete(t.id));
+      }
+      return next;
+    });
   };
 
   const handleSelectTransaction = (transactionId: string) => {
-    const newSelectedIds = new Set(selectedIds);
-    if (newSelectedIds.has(transactionId)) {
-      newSelectedIds.delete(transactionId);
-    } else {
-      newSelectedIds.add(transactionId);
-    }
-    setSelectedIds(newSelectedIds);
+    setRawSelectedIds((prev) => {
+      // 'prev' is guaranteed to be the current, up-to-date Set
+      const next = new Set(prev);
+      if (next.has(transactionId)) {
+        next.delete(transactionId);
+      } else {
+        next.add(transactionId);
+      }
+      return next;
+    });
   };
 
   const clearSelection = () => {
-    setSelectedIds(new Set());
+    setRawSelectedIds(new Set());
   };
 
   const handleCategoryChange = (transactionId: string, categoryId: string) => {
@@ -218,23 +238,27 @@ export default function Transactions() {
   };
 
   const handleBulkCategorize = () => {
-    selectedIds.forEach(id => {
+    if (validSelection.size === 0) return;
+
+    validSelection.forEach((id) => {
       dispatch({
         type: 'UPDATE_TRANSACTION',
         id,
         updates: { categoryId: bulkCategoryId === 'uncategorized' || bulkCategoryId === null ? null : bulkCategoryId },
       });
     });
-    clearSelection();
+    setRawSelectedIds(new Set());
     setIsBulkCategorizeDialogOpen(false);
     setBulkCategoryId(null);
   };
 
   const handleBulkDelete = () => {
-    selectedIds.forEach(id => {
+    if (validSelection.size === 0) return;
+
+    validSelection.forEach((id) => {
       dispatch({ type: 'DELETE_TRANSACTION', id });
     });
-    clearSelection();
+    setRawSelectedIds(new Set());
     setIsBulkDeleteDialogOpen(false);
   };
 
@@ -252,7 +276,7 @@ export default function Transactions() {
       </div>
 
       {/* Filters */}
-      <TransactionFiltersComponent filters={filters} onFiltersChange={setFilters} />
+      <TransactionFiltersComponent filters={filters} onFiltersChange={handleFilterChange} />
 
       {/* Search Bar */}
       <Card>
@@ -262,7 +286,7 @@ export default function Transactions() {
             <Input
               placeholder="Search descriptions..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={handleSearchChange}
               className="pl-9"
             />
           </div>
@@ -270,12 +294,12 @@ export default function Transactions() {
       </Card>
 
       {/* Bulk Actions Bar */}
-      {selectedIds.size > 0 && (
+      {validSelection.size > 0 && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <Badge variant="secondary" className="px-3 py-1">
-                {selectedIds.size} selected
+                {validSelection.size} selected
               </Badge>
               <Button
                 variant="outline"
@@ -383,7 +407,7 @@ export default function Transactions() {
                         transaction={transaction}
                         account={account}
                         category={category}
-                        isSelected={selectedIds.has(transaction.id)}
+                        isSelected={rawSelectedIds.has(transaction.id)}
                         isCompressed={isCompressed}
                         style={{ paddingRight: SCROLLBAR_WIDTH }} // react-virtuoso handles positioning internally
                         gridTemplateColumns={GRID_TEMPLATE_COLUMNS}
@@ -646,7 +670,7 @@ export default function Transactions() {
           <DialogHeader>
             <DialogTitle>Bulk Categorize Transactions</DialogTitle>
             <DialogDescription>
-              Select a category to apply to {selectedIds.size} selected transactions
+              Select a category to apply to {validSelection.size} selected transactions
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -706,7 +730,7 @@ export default function Transactions() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Selected Transactions?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete {selectedIds.size} transactions. This action cannot be undone.
+              This will permanently delete {validSelection.size} transactions. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
