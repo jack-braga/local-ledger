@@ -71,6 +71,15 @@ export function TransactionFiltersComponent({ filters, onFiltersChange }: Transa
     updateFilters({ categoryIds: newCategoryIds });
   };
 
+  const selectAllCategories = () => {
+    const allCategoryIds = state.categories.map(category => category.id);
+    updateFilters({ categoryIds: allCategoryIds });
+  };
+
+  const deselectAllCategories = () => {
+    updateFilters({ categoryIds: [] });
+  };
+
   const clearFilters = () => {
     onFiltersChange({
       dateRange: {
@@ -210,22 +219,40 @@ export function TransactionFiltersComponent({ filters, onFiltersChange }: Transa
           {state.categories.length === 0 ? (
             <p className="text-sm text-muted-foreground">No categories available</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {state.categories.map((category) => (
+            <div className="space-y-2">
+              <div className="flex gap-2">
                 <Button
-                  key={category.id}
-                  variant={filters.categoryIds.includes(category.id) ? 'default' : 'outline'}
+                  variant="outline"
                   size="sm"
-                  onClick={() => toggleCategory(category.id)}
-                  className="flex items-center gap-2"
+                  onClick={selectAllCategories}
                 >
-                  <div
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: category.color || '#64748b' }}
-                  />
-                  {category.name}
+                  Select All
                 </Button>
-              ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={deselectAllCategories}
+                >
+                  Deselect All
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {state.categories.map((category) => (
+                  <Button
+                    key={category.id}
+                    variant={filters.categoryIds.includes(category.id) ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => toggleCategory(category.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <div
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: category.color || '#64748b' }}
+                    />
+                    {category.name}
+                  </Button>
+                ))}
+              </div>
             </div>
           )}
         </div>
