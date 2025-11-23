@@ -238,6 +238,7 @@ export function TransactionFiltersComponent({ filters, onFiltersChange }: Transa
 
 /**
  * Utility function to apply filters to transactions
+ * Optimized with Set-based lookups for O(1) performance instead of O(n) array.includes()
  */
 export function applyTransactionFilters(
   transactions: Transaction[],
@@ -246,36 +247,39 @@ export function applyTransactionFilters(
   let filtered = [...transactions];
 
   // Apply date range filter
-  const startDate = filters.dateRange.startDate ? startOfDay(filters.dateRange.startDate) : null;
-  const endDate = filters.dateRange.endDate ? endOfDay(filters.dateRange.endDate) : null;
+  const startDate = filters.dateRange.startDate ? startOfDay(filters.dateRange.startDate).getTime() : null;
+  const endDate = filters.dateRange.endDate ? endOfDay(filters.dateRange.endDate).getTime() : null;
 
   if (startDate || endDate) {
     filtered = filtered.filter((t) => {
-      const transactionDate = new Date(t.date);
-      if (startDate && transactionDate < startDate) return false;
-      if (endDate && transactionDate > endDate) return false;
+      const transactionTime = new Date(t.date).getTime();
+      if (startDate && transactionTime < startDate) return false;
+      if (endDate && transactionTime > endDate) return false;
       return true;
     });
   }
 
-  // Apply transaction types filter
+  // Apply transaction types filter - optimized with Set
   if (filters.transactionTypes.length > 0 && !filters.transactionTypes.includes('all')) {
+    const transactionTypesSet = new Set(filters.transactionTypes);
     filtered = filtered.filter((t) => {
       const transactionType = getTransactionType(t.amount);
-      return filters.transactionTypes.includes(transactionType);
+      return transactionTypesSet.has(transactionType);
     });
   }
 
-  // Apply accounts filter
+  // Apply accounts filter - optimized with Set for O(1) lookup
   if (filters.accountIds.length > 0) {
-    filtered = filtered.filter((t) => filters.accountIds.includes(t.accountId));
+    const accountIdsSet = new Set(filters.accountIds);
+    filtered = filtered.filter((t) => accountIdsSet.has(t.accountId));
   }
 
-  // Apply categories filter
+  // Apply categories filter - optimized with Set for O(1) lookup
   if (filters.categoryIds.length > 0) {
+    const categoryIdsSet = new Set(filters.categoryIds);
     filtered = filtered.filter((t) => {
       if (!t.categoryId) return false;
-      return filters.categoryIds.includes(t.categoryId);
+      return categoryIdsSet.has(t.categoryId);
     });
   }
 

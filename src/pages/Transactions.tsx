@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useDeferredValue } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { useFinance } from '@/contexts/FinanceContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,19 +67,22 @@ export default function Transactions() {
     isManualEntry: true,
   });
 
+  // Defer search value for performance - UI updates immediately, filtering happens after urgent updates
+  const deferredSearch = useDeferredValue(search);
+
   const filteredTransactions = useMemo(() => {
     let filtered = applyTransactionFilters(state.transactions, filters);
     
-    // Apply search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
+    // Apply search filter using deferred value
+    if (deferredSearch) {
+      const searchLower = deferredSearch.toLowerCase();
       filtered = filtered.filter(t => 
         t.description.toLowerCase().includes(searchLower)
       );
     }
     
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [state.transactions, filters, search]);
+  }, [state.transactions, filters, deferredSearch]);
 
   // Lookup maps for O(1) access instead of O(n) .find() calls
   const accountsMap = useMemo(() => {
