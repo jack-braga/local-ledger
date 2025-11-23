@@ -158,6 +158,7 @@ function financeReducer(state: AppState, action: Action): AppState {
         return {
           ...action.state,
           currency: action.state.currency || 'AUD',
+          version: action.state.version || '1.0.0',
           lastModified: new Date().toISOString(),
         };
       
@@ -229,7 +230,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const importState = async (file: File) => {
     const text = await file.text();
     const parsed = JSON.parse(text) as AppState;
-    dispatch({ type: 'IMPORT_STATE', state: parsed });
+    const importedState: AppState = {
+      ...parsed,
+      currency: parsed.currency || 'AUD',
+      version: parsed.version || '1.0.0',
+      lastModified: new Date().toISOString(),
+    };
+    dispatch({ type: 'IMPORT_STATE', state: importedState });
+    // Immediately save to localStorage to prevent race condition
+    // This ensures data persists even if the page reloads quickly
+    localStorage.setItem('financeAppState', JSON.stringify(importedState));
   };
 
   return (
