@@ -82,7 +82,7 @@ export const TransactionRow = memo(({
       </div>
 
       {/* Description Column */}
-      <div className={`${cellPadding} align-middle max-w-xs truncate`}>
+      <div className={`${cellPadding} align-middle truncate`}>
         {transaction.description}
       </div>
 

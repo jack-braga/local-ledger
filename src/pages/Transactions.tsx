@@ -23,13 +23,13 @@ import { TransactionRow } from '@/components/TransactionRow';
 // Column width constants - using minmax for relative sizing with minimums
 // Format: minmax(minimum-pixels, relative-size)
 const GRID_TEMPLATE_COLUMNS = `
-  minmax(50px, 0.5fr)
-  minmax(100px, 1fr)
-  minmax(150px, 2fr)
+  minmax(50px, 0.25fr)
+  minmax(100px, 0.5fr)
+  minmax(150px, 3fr)
   minmax(120px, 1fr)
-  minmax(80px, 0.8fr)
-  minmax(150px, 1.5fr)
-  minmax(100px, 1fr)
+  minmax(80px, 0.5fr)
+  minmax(150px, 1fr)
+  minmax(100px, 0.75fr)
   minmax(50px, 0.5fr)
 `.trim().replace(/\s+/g, ' ');
 
