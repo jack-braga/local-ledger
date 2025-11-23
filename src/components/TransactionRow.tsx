@@ -58,7 +58,7 @@ export const TransactionRow = memo(({
   );
 
   const cellPadding = isCompressed ? 'p-2' : 'p-4';
-  const rowHeight = isCompressed ? 'h-[50px]' : '';
+  const rowHeight = isCompressed ? 'h-[40px]' : '';
 
   return (
     <div
@@ -69,7 +69,7 @@ export const TransactionRow = memo(({
       }}
     >
       {/* Checkbox Column */}
-      <div className={`${cellPadding} flex items-center [&:has([role=checkbox])]:pr-0`}>
+      <div className={`${cellPadding} px-4 flex items-center [&:has([role=checkbox])]:pr-0`}>
         <Checkbox
           checked={isSelected}
           onCheckedChange={() => onSelect(transaction.id)}
@@ -77,17 +77,17 @@ export const TransactionRow = memo(({
       </div>
 
       {/* Date Column */}
-      <div className={`${cellPadding} font-mono text-sm align-middle`}>
+      <div className={`${cellPadding} px-4 font-mono text-sm align-middle`}>
         {formattedDate}
       </div>
 
       {/* Description Column */}
-      <div className={`${cellPadding} align-middle truncate`}>
+      <div className={`${cellPadding} px-4 align-middle truncate`}>
         {transaction.description}
       </div>
 
       {/* Account Column */}
-      <div className={`${cellPadding} align-middle`}>
+      <div className={`${cellPadding} px-4 align-middle`}>
         {account && (
           <div className="flex items-center gap-2">
             <div
@@ -100,14 +100,14 @@ export const TransactionRow = memo(({
       </div>
 
       {/* Type Column */}
-      <div className={`${cellPadding} align-middle`}>
+      <div className={`${cellPadding} px-4 align-middle`}>
         <Badge variant="outline" className={getTypeColor(transactionType)}>
           {transactionType}
         </Badge>
       </div>
 
       {/* Category Column */}
-      <div className={`${cellPadding} align-middle`}>
+      <div className={`${isCompressed ? 'p-1' : 'p-4'} px-4 align-middle`}>
         <Select
           value={transaction.categoryId || 'uncategorized'}
           onValueChange={(value) => onCategoryChange(transaction.id, value)}
@@ -143,14 +143,14 @@ export const TransactionRow = memo(({
       </div>
 
       {/* Amount Column */}
-      <div className={`${cellPadding} text-right font-mono font-semibold align-middle ${
+      <div className={`${cellPadding} px-4 text-right font-mono font-semibold align-middle ${
         transaction.amount >= 0 ? 'text-success' : 'text-destructive'
       }`}>
         {formattedAmount}
       </div>
 
       {/* Actions Column */}
-      <div className={`${cellPadding} align-middle [&:has([role=checkbox])]:pr-0`}>
+      <div className={`${isCompressed ? 'p-1' : 'p-4'} px-4 align-middle [&:has([role=checkbox])]:pr-0`}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
