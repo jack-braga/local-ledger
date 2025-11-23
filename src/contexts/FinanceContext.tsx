@@ -204,9 +204,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Save to localStorage on state change
+  // Save to localStorage on state change (throttled)
   useEffect(() => {
-    localStorage.setItem('financeAppState', JSON.stringify(state));
+    const timeoutId = setTimeout(() => {
+      localStorage.setItem('financeAppState', JSON.stringify(state));
+    }, 500); // Wait 500ms after last change
+
+    return () => clearTimeout(timeoutId);
   }, [state]);
 
   const exportState = () => {

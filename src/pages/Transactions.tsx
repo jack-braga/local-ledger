@@ -63,6 +63,15 @@ export default function Transactions() {
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [state.transactions, filters, search]);
 
+  // Lookup maps for O(1) access instead of O(n) .find() calls
+  const accountsMap = useMemo(() => {
+    return new Map(state.accounts.map(a => [a.id, a]));
+  }, [state.accounts]);
+
+  const categoriesMap = useMemo(() => {
+    return new Map(state.categories.map(c => [c.id, c]));
+  }, [state.categories]);
+
   // Selection helper functions
   const isAllSelected = useMemo(() => {
     return filteredTransactions.length > 0 && filteredTransactions.every(t => selectedIds.has(t.id));
@@ -313,8 +322,8 @@ export default function Transactions() {
                   </TableRow>
                 ) : (
                   filteredTransactions.map(transaction => {
-                    const account = state.accounts.find(a => a.id === transaction.accountId);
-                    const category = state.categories.find(c => c.id === transaction.categoryId);
+                    const account = accountsMap.get(transaction.accountId);
+                    const category = transaction.categoryId ? categoriesMap.get(transaction.categoryId) : undefined;
 
                     return (
                       <TableRow key={transaction.id}>
@@ -354,7 +363,7 @@ export default function Transactions() {
                             <SelectTrigger className="w-[180px] h-8">
                               <SelectValue>
                                 {transaction.categoryId ? (() => {
-                                  const cat = state.categories.find(c => c.id === transaction.categoryId);
+                                  const cat = categoriesMap.get(transaction.categoryId);
                                   return cat ? (
                                     <div className="flex items-center gap-2">
                                       <div
@@ -490,7 +499,7 @@ export default function Transactions() {
                 <SelectTrigger>
                   <SelectValue>
                     {newTransaction.categoryId ? (() => {
-                      const cat = state.categories.find(c => c.id === newTransaction.categoryId);
+                      const cat = categoriesMap.get(newTransaction.categoryId);
                       return cat ? (
                         <div className="flex items-center gap-2">
                           <div
@@ -597,7 +606,7 @@ export default function Transactions() {
                 <SelectTrigger>
                   <SelectValue>
                     {editFormData.categoryId ? (() => {
-                      const cat = state.categories.find(c => c.id === editFormData.categoryId);
+                      const cat = categoriesMap.get(editFormData.categoryId);
                       return cat ? (
                         <div className="flex items-center gap-2">
                           <div
@@ -676,7 +685,7 @@ export default function Transactions() {
                 <SelectTrigger>
                   <SelectValue>
                     {bulkCategoryId ? (() => {
-                      const cat = state.categories.find(c => c.id === bulkCategoryId);
+                      const cat = categoriesMap.get(bulkCategoryId);
                       return cat ? (
                         <div className="flex items-center gap-2">
                           <div
