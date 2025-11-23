@@ -9,12 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, ChevronUp, ChevronDown, Edit, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Trash2, ChevronUp, ChevronDown, Edit, CheckCircle2, XCircle, Play } from 'lucide-react';
 import { Category, CategoryRule, TransactionType, RuleTargetType } from '@/types/finance';
 import { toast } from '@/hooks/use-toast';
+import { getTransactionType } from '@/utils/categoryMatcher';
 
 export default function Categories() {
   const { state, dispatch } = useFinance();
+  const [activeTab, setActiveTab] = useState('categories');
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -271,6 +273,75 @@ export default function Categories() {
     });
   };
 
+  const doesRuleMatchTransaction = (description: string, rule: CategoryRule, transactionType: TransactionType): boolean => {
+    // Check if rule applies to this transaction type
+    if (rule.targetType !== 'ALL' && rule.targetType !== transactionType) {
+      return false;
+    }
+
+    if (rule.matchType === 'contains') {
+      if (rule.caseSensitive) {
+        return description.includes(rule.pattern);
+      } else {
+        return description.toLowerCase().includes(rule.pattern.toLowerCase());
+      }
+    } else {
+      // regex
+      try {
+        const flags = rule.caseSensitive ? '' : 'i';
+        const regex = new RegExp(rule.pattern, flags);
+        return regex.test(description);
+      } catch {
+        return false;
+      }
+    }
+  };
+
+  const handleApplyRuleToUncategorized = (rule: CategoryRule) => {
+    // Find all uncategorized transactions
+    const uncategorizedTransactions = state.transactions.filter(t => !t.categoryId);
+    
+    if (uncategorizedTransactions.length === 0) {
+      toast({
+        title: 'No uncategorized transactions',
+        description: 'There are no uncategorized transactions to apply this rule to.',
+      });
+      return;
+    }
+
+    // Find transactions that match this rule
+    const matchingTransactions = uncategorizedTransactions.filter(t => {
+      const transactionType = getTransactionType(t.amount);
+      return doesRuleMatchTransaction(t.description, rule, transactionType);
+    });
+
+    if (matchingTransactions.length === 0) {
+      toast({
+        title: 'No matches found',
+        description: 'This rule does not match any uncategorized transactions.',
+      });
+      return;
+    }
+
+    if (!confirm(`Apply this rule to ${matchingTransactions.length} uncategorized transaction(s)?`)) {
+      return;
+    }
+
+    // Update all matching transactions
+    matchingTransactions.forEach(transaction => {
+      dispatch({
+        type: 'UPDATE_TRANSACTION',
+        id: transaction.id,
+        updates: { categoryId: rule.categoryId },
+      });
+    });
+
+    toast({
+      title: 'Rule applied',
+      description: `Applied rule to ${matchingTransactions.length} transaction(s)`,
+    });
+  };
+
   const CategoryList = ({ categories }: { categories: Category[] }) => {
     if (categories.length === 0) {
       return (
@@ -344,10 +415,6 @@ export default function Categories() {
       return (
         <div className="text-center py-12 text-muted-foreground">
           <p>No rules yet. Create rules to automatically categorize transactions.</p>
-          <Button onClick={handleCreateRule} className="mt-4 animate-wiggle" size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Rule
-          </Button>
         </div>
       );
     }
@@ -358,10 +425,6 @@ export default function Categories() {
           <p className="text-sm text-muted-foreground">
             Rules are matched in order from top to bottom. The first matching rule wins.
           </p>
-          <Button onClick={handleCreateRule} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Rule
-          </Button>
         </div>
         <div className="space-y-2">
           {state.rules.map((rule, index) => {
@@ -411,6 +474,14 @@ export default function Categories() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleApplyRuleToUncategorized(rule)}
+                        title="Apply rule to all uncategorized transactions"
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleEditRule(rule)}
                       >
                         <Edit className="h-4 w-4" />
@@ -440,13 +511,13 @@ export default function Categories() {
           <h1 className="text-3xl font-bold">Categories</h1>
           <p className="text-muted-foreground mt-1">Manage transaction categories and rules</p>
         </div>
-        <Button onClick={handleCreateCategory}>
+        <Button onClick={activeTab === 'rules' ? handleCreateRule : handleCreateCategory}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Category
+          {activeTab === 'rules' ? 'Create Rule' : 'Create Category'}
         </Button>
       </div>
 
-      <Tabs defaultValue="categories" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="categories">Categories</TabsTrigger>
           <TabsTrigger value="rules">Rules</TabsTrigger>
