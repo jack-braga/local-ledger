@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
-import { Search, MoreVertical, Plus, Edit, Trash2, Upload } from 'lucide-react';
+import { Search, MoreVertical, Plus, Edit, Trash2, Upload, X } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { getTransactionType } from '@/utils/categoryMatcher';
 import { ImportWizard } from '@/components/ImportWizard';
@@ -32,8 +33,12 @@ export default function Transactions() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBulkCategorizeDialogOpen, setIsBulkCategorizeDialogOpen] = useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkCategoryId, setBulkCategoryId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Transaction>>({});
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     date: new Date().toISOString().split('T')[0],
@@ -57,6 +62,42 @@ export default function Transactions() {
     
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [state.transactions, filters, search]);
+
+  // Selection helper functions
+  const isAllSelected = useMemo(() => {
+    return filteredTransactions.length > 0 && filteredTransactions.every(t => selectedIds.has(t.id));
+  }, [filteredTransactions, selectedIds]);
+
+  const isIndeterminate = useMemo(() => {
+    const selectedCount = filteredTransactions.filter(t => selectedIds.has(t.id)).length;
+    return selectedCount > 0 && selectedCount < filteredTransactions.length;
+  }, [filteredTransactions, selectedIds]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const newSelectedIds = new Set(selectedIds);
+      filteredTransactions.forEach(t => newSelectedIds.add(t.id));
+      setSelectedIds(newSelectedIds);
+    } else {
+      const newSelectedIds = new Set(selectedIds);
+      filteredTransactions.forEach(t => newSelectedIds.delete(t.id));
+      setSelectedIds(newSelectedIds);
+    }
+  };
+
+  const handleSelectTransaction = (transactionId: string) => {
+    const newSelectedIds = new Set(selectedIds);
+    if (newSelectedIds.has(transactionId)) {
+      newSelectedIds.delete(transactionId);
+    } else {
+      newSelectedIds.add(transactionId);
+    }
+    setSelectedIds(newSelectedIds);
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
 
   const handleCategoryChange = (transactionId: string, categoryId: string) => {
     dispatch({
@@ -146,6 +187,27 @@ export default function Transactions() {
     }
   };
 
+  const handleBulkCategorize = () => {
+    selectedIds.forEach(id => {
+      dispatch({
+        type: 'UPDATE_TRANSACTION',
+        id,
+        updates: { categoryId: bulkCategoryId === 'uncategorized' || bulkCategoryId === null ? null : bulkCategoryId },
+      });
+    });
+    clearSelection();
+    setIsBulkCategorizeDialogOpen(false);
+    setBulkCategoryId(null);
+  };
+
+  const handleBulkDelete = () => {
+    selectedIds.forEach(id => {
+      dispatch({ type: 'DELETE_TRANSACTION', id });
+    });
+    clearSelection();
+    setIsBulkDeleteDialogOpen(false);
+  };
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -177,6 +239,43 @@ export default function Transactions() {
         </CardContent>
       </Card>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <Badge variant="secondary" className="px-3 py-1">
+                {selectedIds.size} selected
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSelection}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Clear Selection
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsBulkCategorizeDialogOpen(true)}
+              >
+                Bulk Categorize
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsBulkDeleteDialogOpen(true)}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Selected
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Transactions</CardTitle>
@@ -190,19 +289,25 @@ export default function Transactions() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={isIndeterminate ? 'indeterminate' : isAllSelected}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Account</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTransactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                       No transactions found. Import a CSV or add a transaction to get started.
                     </TableCell>
                   </TableRow>
@@ -214,26 +319,10 @@ export default function Transactions() {
                     return (
                       <TableRow key={transaction.id}>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
-                              <DropdownMenuItem onClick={() => handleEdit(transaction)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDelete(transaction)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Checkbox
+                            checked={selectedIds.has(transaction.id)}
+                            onCheckedChange={() => handleSelectTransaction(transaction.id)}
+                          />
                         </TableCell>
                         <TableCell className="font-mono text-sm">
                           {format(new Date(transaction.date), 'dd/MM/yyyy')}
@@ -298,6 +387,28 @@ export default function Transactions() {
                           transaction.amount >= 0 ? 'text-success' : 'text-destructive'
                         }`}>
                           {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(transaction)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDelete(transaction)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
@@ -540,6 +651,87 @@ export default function Transactions() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Categorize Dialog */}
+      <Dialog open={isBulkCategorizeDialogOpen} onOpenChange={setIsBulkCategorizeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Categorize Transactions</DialogTitle>
+            <DialogDescription>
+              Select a category to apply to {selectedIds.size} selected transactions
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="bulk-category">Category</Label>
+              <Select
+                value={bulkCategoryId || 'uncategorized'}
+                onValueChange={(value) => setBulkCategoryId(value === 'uncategorized' ? null : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue>
+                    {bulkCategoryId ? (() => {
+                      const cat = state.categories.find(c => c.id === bulkCategoryId);
+                      return cat ? (
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-3 w-3 rounded-full"
+                            style={{ backgroundColor: cat.color || '#64748b' }}
+                          />
+                          <span>{cat.name}</span>
+                        </div>
+                      ) : '-';
+                    })() : '-'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="uncategorized">-</SelectItem>
+                  {state.categories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: cat.color || '#64748b' }}
+                        />
+                        <span>{cat.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkCategorizeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBulkCategorize}>
+              Apply Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Transactions?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {selectedIds.size} transactions. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDelete} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
