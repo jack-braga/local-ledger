@@ -17,16 +17,17 @@ interface DateRangePickerProps {
     compareFrom?: Date | undefined;
     compareTo?: Date | undefined;
   }) => void;
-  initialDateFrom?: Date | string;
-  initialDateTo?: Date | string;
-  initialCompareFrom?: Date | string;
-  initialCompareTo?: Date | string;
+  dateFrom?: Date | string;
+  dateTo?: Date | string;
+  compareFrom?: Date | string;
+  compareTo?: Date | string;
   align?: "start" | "center" | "end";
   locale?: string;
   showCompare?: boolean;
 }
 
-const PRESET_RANGES = [
+const PRESET_RANGES: Array<{ label: string; value: number | "clear" }> = [
+  { label: "Clear", value: "clear" },
   { label: "Today", value: 0 },
   { label: "Yesterday", value: 1 },
   { label: "Last 7 days", value: 7 },
@@ -39,44 +40,37 @@ const PRESET_RANGES = [
 
 export function DateRangePicker({
   onUpdate,
-  initialDateFrom,
-  initialDateTo,
-  initialCompareFrom,
-  initialCompareTo,
+  dateFrom: dateFromProp,
+  dateTo: dateToProp,
+  compareFrom: compareFromProp,
+  compareTo: compareToProp,
   align = "end",
   locale = "en-US",
   showCompare = true,
 }: DateRangePickerProps) {
-  const [dateFrom, setDateFrom] = React.useState<Date | undefined>(
-    initialDateFrom
-      ? typeof initialDateFrom === "string"
-        ? new Date(initialDateFrom)
-        : initialDateFrom
-      : undefined
-  );
-  const [dateTo, setDateTo] = React.useState<Date | undefined>(
-    initialDateTo
-      ? typeof initialDateTo === "string"
-        ? new Date(initialDateTo)
-        : initialDateTo
-      : undefined
-  );
-  const [compareFrom, setCompareFrom] = React.useState<Date | undefined>(
-    initialCompareFrom
-      ? typeof initialCompareFrom === "string"
-        ? new Date(initialCompareFrom)
-        : initialCompareFrom
-      : undefined
-  );
-  const [compareTo, setCompareTo] = React.useState<Date | undefined>(
-    initialCompareTo
-      ? typeof initialCompareTo === "string"
-        ? new Date(initialCompareTo)
-        : initialCompareTo
-      : undefined
-  );
+  // Convert props to Date objects if they're strings
+  const dateFrom = React.useMemo(() => {
+    if (!dateFromProp) return undefined;
+    return typeof dateFromProp === "string" ? new Date(dateFromProp) : dateFromProp;
+  }, [dateFromProp]);
+
+  const dateTo = React.useMemo(() => {
+    if (!dateToProp) return undefined;
+    return typeof dateToProp === "string" ? new Date(dateToProp) : dateToProp;
+  }, [dateToProp]);
+
+  const compareFrom = React.useMemo(() => {
+    if (!compareFromProp) return undefined;
+    return typeof compareFromProp === "string" ? new Date(compareFromProp) : compareFromProp;
+  }, [compareFromProp]);
+
+  const compareTo = React.useMemo(() => {
+    if (!compareToProp) return undefined;
+    return typeof compareToProp === "string" ? new Date(compareToProp) : compareToProp;
+  }, [compareToProp]);
+
   const [compareEnabled, setCompareEnabled] = React.useState(
-    showCompare && (!!initialCompareFrom || !!initialCompareTo)
+    showCompare && (!!compareFromProp || !!compareToProp)
   );
 
   const dateRange: DateRange | undefined = React.useMemo(() => {
@@ -89,16 +83,20 @@ export function DateRangePicker({
     return undefined;
   }, [dateFrom, dateTo]);
 
-  React.useEffect(() => {
-    onUpdate({
-      dateFrom,
-      dateTo,
-      compareFrom: compareEnabled ? compareFrom : undefined,
-      compareTo: compareEnabled ? compareTo : undefined,
-    });
-  }, [dateFrom, dateTo, compareFrom, compareTo, compareEnabled, onUpdate]);
+  const handlePresetClick = (value: number | "clear") => {
+    // Handle Clear preset
+    if (value === "clear") {
+      onUpdate({
+        dateFrom: undefined,
+        dateTo: undefined,
+        compareFrom: undefined,
+        compareTo: undefined,
+      });
+      return;
+    }
 
-  const handlePresetClick = (days: number) => {
+    // Handle numeric day presets
+    const days = value;
     const today = endOfDay(new Date());
     let from: Date;
     let to: Date = today;
@@ -114,21 +112,70 @@ export function DateRangePicker({
       to = endOfDay(today);
     }
 
-    setDateFrom(from);
-    setDateTo(to);
+    onUpdate({
+      dateFrom: from,
+      dateTo: to,
+      compareFrom: undefined,
+      compareTo: undefined,
+    });
   };
 
   const handleCalendarSelect = (range: DateRange | undefined) => {
-    if (range?.from) {
-      setDateFrom(range.from);
-    } else {
-      setDateFrom(undefined);
-    }
-    if (range?.to) {
-      setDateTo(range.to);
-    } else {
-      setDateTo(undefined);
-    }
+    const newDateFrom = range?.from ? range.from : undefined;
+    const newDateTo = range?.to ? range.to : undefined;
+    
+    onUpdate({
+      dateFrom: newDateFrom,
+      dateTo: newDateTo,
+      compareFrom: compareEnabled ? compareFrom : undefined,
+      compareTo: compareEnabled ? compareTo : undefined,
+    });
+  };
+
+  const handleDateFromChange = (newDate: Date | undefined) => {
+    onUpdate({
+      dateFrom: newDate,
+      dateTo,
+      compareFrom: compareEnabled ? compareFrom : undefined,
+      compareTo: compareEnabled ? compareTo : undefined,
+    });
+  };
+
+  const handleDateToChange = (newDate: Date | undefined) => {
+    onUpdate({
+      dateFrom,
+      dateTo: newDate,
+      compareFrom: compareEnabled ? compareFrom : undefined,
+      compareTo: compareEnabled ? compareTo : undefined,
+    });
+  };
+
+  const handleCompareFromChange = (newDate: Date | undefined) => {
+    onUpdate({
+      dateFrom,
+      dateTo,
+      compareFrom: newDate,
+      compareTo: compareEnabled ? compareTo : undefined,
+    });
+  };
+
+  const handleCompareToChange = (newDate: Date | undefined) => {
+    onUpdate({
+      dateFrom,
+      dateTo,
+      compareFrom: compareEnabled ? compareFrom : undefined,
+      compareTo: newDate,
+    });
+  };
+
+  const handleCompareEnabledChange = (enabled: boolean) => {
+    setCompareEnabled(enabled);
+    onUpdate({
+      dateFrom,
+      dateTo,
+      compareFrom: enabled ? compareFrom : undefined,
+      compareTo: enabled ? compareTo : undefined,
+    });
   };
 
   const formatDateRange = () => {
@@ -180,12 +227,12 @@ export function DateRangePicker({
                 <DateInput
                   label="From"
                   date={dateFrom}
-                  onDateChange={setDateFrom}
+                  onDateChange={handleDateFromChange}
                 />
                 <DateInput
                   label="To"
                   date={dateTo}
-                  onDateChange={setDateTo}
+                  onDateChange={handleDateToChange}
                 />
               </div>
 
@@ -201,7 +248,7 @@ export function DateRangePicker({
                   <Switch
                     id="compare"
                     checked={compareEnabled}
-                    onCheckedChange={setCompareEnabled}
+                    onCheckedChange={handleCompareEnabledChange}
                   />
                 </div>
               )}
@@ -212,12 +259,12 @@ export function DateRangePicker({
                   <DateInput
                     label="Compare From"
                     date={compareFrom}
-                    onDateChange={setCompareFrom}
+                    onDateChange={handleCompareFromChange}
                   />
                   <DateInput
                     label="Compare To"
                     date={compareTo}
-                    onDateChange={setCompareTo}
+                    onDateChange={handleCompareToChange}
                   />
                 </div>
               )}

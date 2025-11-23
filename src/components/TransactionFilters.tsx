@@ -131,8 +131,8 @@ export function TransactionFiltersComponent({ filters, onFiltersChange }: Transa
           <div className="flex items-center justify-between">
             <DateRangePicker
               onUpdate={handleDateRangeUpdate}
-              initialDateFrom={filters.dateRange.startDate || undefined}
-              initialDateTo={filters.dateRange.endDate || undefined}
+              dateFrom={filters.dateRange.startDate || undefined}
+              dateTo={filters.dateRange.endDate || undefined}
               align="start"
               locale="en-US"
               showCompare={false}
