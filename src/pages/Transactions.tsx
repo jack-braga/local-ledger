@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
+import { Virtuoso } from 'react-virtuoso';
 import { useFinance } from '@/contexts/FinanceContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -11,12 +11,29 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import { Search, MoreVertical, Plus, Edit, Trash2, Upload, X } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { getTransactionType } from '@/utils/categoryMatcher';
 import { ImportWizard } from '@/components/ImportWizard';
 import { TransactionFiltersComponent, TransactionFilters, applyTransactionFilters } from '@/components/TransactionFilters';
+import { TransactionRow } from '@/components/TransactionRow';
+
+// Column width constants - using minmax for relative sizing with minimums
+// Format: minmax(minimum-pixels, relative-size)
+const GRID_TEMPLATE_COLUMNS = `
+  minmax(50px, 0.5fr)
+  minmax(100px, 1fr)
+  minmax(150px, 2fr)
+  minmax(120px, 1fr)
+  minmax(80px, 0.8fr)
+  minmax(150px, 1.5fr)
+  minmax(100px, 1fr)
+  minmax(50px, 0.5fr)
+`.trim().replace(/\s+/g, ' ');
+
+const SCROLLBAR_WIDTH = 17;
 
 export default function Transactions() {
   const { state, dispatch } = useFinance();
@@ -39,6 +56,7 @@ export default function Transactions() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkCategoryId, setBulkCategoryId] = useState<string | null>(null);
+  const [isCompressed, setIsCompressed] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<Transaction>>({});
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     date: new Date().toISOString().split('T')[0],
@@ -288,143 +306,96 @@ export default function Transactions() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Transactions</CardTitle>
-          <Button onClick={() => setIsAddDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Transaction
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="compress-toggle" className="text-sm text-muted-foreground">
+                Compressed
+              </Label>
+              <Switch
+                id="compress-toggle"
+                checked={isCompressed}
+                onCheckedChange={setIsCompressed}
+              />
+            </div>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Transaction
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={isIndeterminate ? 'indeterminate' : isAllSelected}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                      No transactions found. Import a CSV or add a transaction to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredTransactions.map(transaction => {
+          <div className="relative w-full flex flex-col" style={{ height: 'calc(100vh - 200px)' }}>
+            {/* Header - Div-based with same grid template as rows */}
+            <div
+              className="grid border-b text-sm h-12 bg-muted/50 flex-shrink-0"
+              style={{
+                gridTemplateColumns: GRID_TEMPLATE_COLUMNS,
+                paddingRight: SCROLLBAR_WIDTH,
+              }}
+            >
+              <div className="px-4 flex items-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">
+                <Checkbox
+                  checked={isIndeterminate ? 'indeterminate' : isAllSelected}
+                  onCheckedChange={handleSelectAll}
+                />
+              </div>
+              <div className="px-4 flex items-center align-middle font-medium text-muted-foreground">
+                Date
+              </div>
+              <div className="px-4 flex items-center align-middle font-medium text-muted-foreground">
+                Description
+              </div>
+              <div className="px-4 flex items-center align-middle font-medium text-muted-foreground">
+                Account
+              </div>
+              <div className="px-4 flex items-center align-middle font-medium text-muted-foreground">
+                Type
+              </div>
+              <div className="px-4 flex items-center align-middle font-medium text-muted-foreground">
+                Category
+              </div>
+              <div className="px-4 flex items-center align-middle font-medium text-muted-foreground justify-end">
+                Amount
+              </div>
+              <div className="px-4 flex items-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">
+              </div>
+            </div>
+
+            {/* Virtualized Body */}
+            {filteredTransactions.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm flex-1">
+                No transactions found. Import a CSV or add a transaction to get started.
+              </div>
+            ) : (
+              <div className="flex-1">
+                <Virtuoso
+                  data={filteredTransactions}
+                  style={{ height: '100%' }}
+                  itemContent={(index, transaction) => {
                     const account = accountsMap.get(transaction.accountId);
                     const category = transaction.categoryId ? categoriesMap.get(transaction.categoryId) : undefined;
 
                     return (
-                      <TableRow key={transaction.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedIds.has(transaction.id)}
-                            onCheckedChange={() => handleSelectTransaction(transaction.id)}
-                          />
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {format(new Date(transaction.date), 'dd/MM/yyyy')}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {transaction.description}
-                        </TableCell>
-                        <TableCell>
-                          {account && (
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="h-3 w-3 rounded-full"
-                                style={{ backgroundColor: account.color }}
-                              />
-                              <span className="text-sm">{account.name}</span>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={getTypeColor(getTransactionType(transaction.amount))}>
-                            {getTransactionType(transaction.amount)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={transaction.categoryId || 'uncategorized'}
-                            onValueChange={(value) => handleCategoryChange(transaction.id, value)}
-                          >
-                            <SelectTrigger className="w-[180px] h-8">
-                              <SelectValue>
-                                {transaction.categoryId ? (() => {
-                                  const cat = categoriesMap.get(transaction.categoryId);
-                                  return cat ? (
-                                    <div className="flex items-center gap-2">
-                                      <div
-                                        className="h-3 w-3 rounded-full"
-                                        style={{ backgroundColor: cat.color || '#64748b' }}
-                                      />
-                                      <span>{cat.name}</span>
-                                    </div>
-                                  ) : '-';
-                                })() : '-'}
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="uncategorized">-</SelectItem>
-                              {state.categories.map(cat => (
-                                <SelectItem key={cat.id} value={cat.id}>
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className="h-3 w-3 rounded-full"
-                                      style={{ backgroundColor: cat.color || '#64748b' }}
-                                    />
-                                    <span>{cat.name}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className={`text-right font-mono font-semibold ${
-                          transaction.amount >= 0 ? 'text-success' : 'text-destructive'
-                        }`}>
-                          {transaction.amount >= 0 ? '+' : ''}${Math.abs(transaction.amount).toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEdit(transaction)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDelete(transaction)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                      <TransactionRow
+                        transaction={transaction}
+                        account={account}
+                        category={category}
+                        isSelected={selectedIds.has(transaction.id)}
+                        isCompressed={isCompressed}
+                        style={{ paddingRight: SCROLLBAR_WIDTH }} // react-virtuoso handles positioning internally
+                        gridTemplateColumns={GRID_TEMPLATE_COLUMNS}
+                        onSelect={handleSelectTransaction}
+                        onCategoryChange={handleCategoryChange}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        categories={state.categories}
+                        getTypeColor={getTypeColor}
+                      />
                     );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                  }}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
