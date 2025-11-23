@@ -57,7 +57,7 @@ export const TransactionRow = memo(({
     [transaction.amount]
   );
 
-  const cellPadding = isCompressed ? 'p-2' : 'p-4';
+  const cellPadding = isCompressed ? 'p-2' : 'p-5';
   const rowHeight = isCompressed ? 'h-[40px]' : '';
 
   return (
