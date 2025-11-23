@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, MoreVertical } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { Edit, Trash2, MoreVertical, Copy } from 'lucide-react';
 
 interface TransactionRowProps {
   transaction: Transaction;
@@ -82,8 +83,23 @@ export const TransactionRow = memo(({
       </div>
 
       {/* Description Column */}
-      <div className={`${cellPadding} px-4 align-middle truncate`}>
-        {transaction.description}
+      <div className={`${cellPadding} px-4 align-middle flex items-center gap-2`}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 flex-shrink-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(transaction.description);
+            toast({
+              title: "Copied!",
+              description: "Description copied to clipboard",
+            });
+          }}
+        >
+          <Copy className="h-3 w-3" />
+        </Button>
+        <span className="truncate flex-1">{transaction.description}</span>
       </div>
 
       {/* Account Column */}
