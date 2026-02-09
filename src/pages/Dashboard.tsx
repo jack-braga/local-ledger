@@ -44,12 +44,66 @@ export default function Dashboard() {
     // Net worth: sum of ALL transactions (all accounts)
     const netWorth = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
 
-    // Calculate monthly spending (last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const monthlySpending = expenseTransactions
-      .filter(t => new Date(t.date) >= thirtyDaysAgo)
-      .reduce((sum, t) => sum + t.amount, 0);
+    // Determine date range for projection
+    // Priority: Use explicit filter dates if set, otherwise derive from transaction span
+    const getDateRangeForProjection = (): { start: Date | null; end: Date | null } => {
+      // Helper to get earliest/latest transaction dates
+      const getTransactionDateBounds = () => {
+        if (filteredTransactions.length === 0) return { earliest: null, latest: null };
+
+        let earliest = new Date(filteredTransactions[0].date);
+        let latest = new Date(filteredTransactions[0].date);
+        for (const t of filteredTransactions) {
+          const tDate = new Date(t.date);
+          if (tDate < earliest) earliest = tDate;
+          if (tDate > latest) latest = tDate;
+        }
+        return { earliest, latest };
+      };
+
+      // If BOTH dates are explicitly set, use them directly
+      if (filters.dateRange.startDate && filters.dateRange.endDate) {
+        return {
+          start: filters.dateRange.startDate,
+          end: filters.dateRange.endDate
+        };
+      }
+
+      // If only START date is set, derive end from transactions
+      if (filters.dateRange.startDate && !filters.dateRange.endDate) {
+        const { latest } = getTransactionDateBounds();
+        return {
+          start: filters.dateRange.startDate,
+          end: latest
+        };
+      }
+
+      // If only END date is set, derive start from transactions
+      if (!filters.dateRange.startDate && filters.dateRange.endDate) {
+        const { earliest } = getTransactionDateBounds();
+        return {
+          start: earliest,
+          end: filters.dateRange.endDate
+        };
+      }
+
+      // No date filter set - derive full range from transaction dates
+      const { earliest, latest } = getTransactionDateBounds();
+      return { start: earliest, end: latest };
+    };
+
+    const dateRange = getDateRangeForProjection();
+
+    // Calculate days in range (inclusive)
+    const daysInRange = (() => {
+      if (!dateRange.start || !dateRange.end) return 0;
+      const diffTime = Math.abs(dateRange.end.getTime() - dateRange.start.getTime());
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    })();
+
+    // Net value and 30-day projection
+    const netValue = income + expenses; // expenses is already negative
+    const thirtyDayProjection = daysInRange > 0 ? (netValue / daysInRange) * 30 : 0;
 
     // Savings rate: (Income - Expenses) / Income * 100
     const savingsRate = income > 0 ? ((income + expenses) / income) * 100 : 0; // expenses is negative, so income + expenses = income - |expenses|
@@ -59,12 +113,13 @@ export default function Dashboard() {
       expenses: Math.abs(expenses), // For display, show absolute value
       expensesRaw: expenses, // Keep raw for calculations
       netWorth,
-      monthlySpending: Math.abs(monthlySpending),
+      thirtyDayProjection,
+      daysInRange,
       savingsRate,
       totalTransactions: filteredTransactions.length,
       uncategorized: filteredTransactions.filter(t => !t.categoryId).length,
     };
-  }, [filteredTransactions]);
+  }, [filteredTransactions, filters.dateRange]);
 
   // Income vs Expense data for donut chart
   const incomeExpenseData = useMemo(() => {
@@ -148,14 +203,27 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 md:p-6 md:pb-2">
-            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Monthly Spending</CardTitle>
-            <TrendingDown className="h-4 w-4 text-destructive hidden sm:block" />
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+              30-Day Projection
+            </CardTitle>
+            {stats.thirtyDayProjection >= 0 ? (
+              <TrendingUp className="h-4 w-4 text-success hidden sm:block" />
+            ) : (
+              <TrendingDown className="h-4 w-4 text-destructive hidden sm:block" />
+            )}
           </CardHeader>
           <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-            <div className="text-lg md:text-2xl font-bold font-mono text-destructive">
-              ${stats.monthlySpending.toLocaleString('en-AU', { minimumFractionDigits: 2 })}
+            <div className={`text-lg md:text-2xl font-bold font-mono ${
+              stats.thirtyDayProjection >= 0 ? 'text-success' : 'text-destructive'
+            }`}>
+              {stats.thirtyDayProjection >= 0 ? '+' : ''}
+              ${stats.thirtyDayProjection.toLocaleString('en-AU', { minimumFractionDigits: 2 })}
             </div>
-            <p className="text-xs text-muted-foreground mt-1 hidden md:block">Last 30 days</p>
+            <p className="text-xs text-muted-foreground mt-1 hidden md:block">
+              {stats.daysInRange > 0
+                ? `Based on ${stats.daysInRange} day${stats.daysInRange !== 1 ? 's' : ''}`
+                : 'No data available'}
+            </p>
           </CardContent>
         </Card>
 
