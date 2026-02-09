@@ -505,13 +505,13 @@ export default function Categories() {
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Categories</h1>
-          <p className="text-muted-foreground mt-1">Manage transaction categories and rules</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Categories</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage transaction categories and rules</p>
         </div>
-        <Button onClick={activeTab === 'rules' ? handleCreateRule : handleCreateCategory}>
+        <Button onClick={activeTab === 'rules' ? handleCreateRule : handleCreateCategory} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           {activeTab === 'rules' ? 'Create Rule' : 'Create Category'}
         </Button>

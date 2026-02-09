@@ -93,10 +93,10 @@ export default function Dashboard() {
   }, [filteredTransactions]);
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Your financial overview</p>
+        <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Your financial overview</p>
       </div>
 
       {/* Getting Started */}
@@ -133,51 +133,51 @@ export default function Dashboard() {
       <TransactionFiltersComponent filters={filters} onFiltersChange={setFilters} />
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Net Worth</CardTitle>
-            <DollarSign className="h-4 w-4 text-primary" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 md:p-6 md:pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Net Worth</CardTitle>
+            <DollarSign className="h-4 w-4 text-primary hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold font-mono ${stats.netWorth >= 0 ? 'text-success' : 'text-destructive'}`}>
+          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+            <div className={`text-lg md:text-2xl font-bold font-mono ${stats.netWorth >= 0 ? 'text-success' : 'text-destructive'}`}>
               ${stats.netWorth.toLocaleString('en-AU', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Spending</CardTitle>
-            <TrendingDown className="h-4 w-4 text-destructive" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 md:p-6 md:pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Monthly Spending</CardTitle>
+            <TrendingDown className="h-4 w-4 text-destructive hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono text-destructive">
+          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+            <div className="text-lg md:text-2xl font-bold font-mono text-destructive">
               ${stats.monthlySpending.toLocaleString('en-AU', { minimumFractionDigits: 2 })}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
+            <p className="text-xs text-muted-foreground mt-1 hidden md:block">Last 30 days</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Savings Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-success" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 md:p-6 md:pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Savings Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-success hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold font-mono ${stats.savingsRate >= 0 ? 'text-success' : 'text-destructive'}`}>
+          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+            <div className={`text-lg md:text-2xl font-bold font-mono ${stats.savingsRate >= 0 ? 'text-success' : 'text-destructive'}`}>
               {stats.savingsRate.toFixed(1)}%
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Transactions</CardTitle>
-            <CreditCard className="h-4 w-4 text-accent" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 md:p-6 md:pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Transactions</CardTitle>
+            <CreditCard className="h-4 w-4 text-accent hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono">{stats.totalTransactions}</div>
+          <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+            <div className="text-lg md:text-2xl font-bold font-mono">{stats.totalTransactions}</div>
             {stats.uncategorized > 0 && (
               <p className="text-xs text-warning mt-1">{stats.uncategorized} uncategorized</p>
             )}

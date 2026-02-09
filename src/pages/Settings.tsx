@@ -116,23 +116,23 @@ export default function Settings() {
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-1">Manage your application settings</p>
+        <h1 className="text-2xl md:text-3xl font-bold">Settings</h1>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">Manage your application settings</p>
       </div>
 
       {/* Accounts Section */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <CardTitle>Accounts</CardTitle>
               <CardDescription>Manage your bank accounts</CardDescription>
             </div>
             <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
               <DialogTrigger asChild>
-                <Button className={state.accounts.length === 0 ? "animate-wiggle" : ""}>
+                <Button className={`w-full sm:w-auto ${state.accounts.length === 0 ? "animate-wiggle" : ""}`}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Account
                 </Button>

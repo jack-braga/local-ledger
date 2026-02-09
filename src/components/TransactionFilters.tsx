@@ -111,11 +111,11 @@ export function TransactionFiltersComponent({ filters, onFiltersChange }: Transa
   return (
     <Card>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader>
+        <CardHeader className="p-4 md:p-6">
           <CollapsibleTrigger asChild>
-            <div className="flex items-center justify-between cursor-pointer hover:bg-accent/50 -m-6 p-6 rounded-t-lg transition-colors">
+            <div className="flex items-center justify-between cursor-pointer hover:bg-accent/50 -m-4 md:-m-6 p-4 md:p-6 rounded-t-lg transition-colors">
               <div className="flex items-center gap-2">
-                <CardTitle>Filters</CardTitle>
+                <CardTitle className="text-base md:text-lg">Filters</CardTitle>
                 {hasActiveFilters && !isOpen && (
                   <Badge variant="secondary" className="ml-2">
                     {getActiveFilterCount()}
@@ -133,11 +133,11 @@ export function TransactionFiltersComponent({ filters, onFiltersChange }: Transa
           </CollapsibleTrigger>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-4 md:p-6 pt-0 md:pt-0">
         {/* Date Range Filter */}
         <div className="space-y-2">
           <Label>Date Range</Label>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <DateRangePicker
               onUpdate={handleDateRangeUpdate}
               dateFrom={filters.dateRange.startDate || undefined}

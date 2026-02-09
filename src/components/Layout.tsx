@@ -1,8 +1,9 @@
 import { ReactNode, useState } from 'react';
 import { NavLink } from '@/components/NavLink';
-import { LayoutDashboard, ListFilter, Settings, Tags, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, ListFilter, Settings, Tags, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -11,6 +12,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -19,11 +21,66 @@ export function Layout({ children }: LayoutProps) {
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
+  const NavContent = ({ onNavigate }: { onNavigate?: () => void }) => (
+    <>
+      {navItems.map(({ to, icon: Icon, label }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={to === '/'}
+          className="flex items-center gap-3 px-3 py-3 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+          onClick={onNavigate}
+        >
+          <Icon className="h-5 w-5 flex-shrink-0" />
+          <span>{label}</span>
+        </NavLink>
+      ))}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar */}
+      {/* Mobile Header */}
+      <header className="fixed top-0 left-0 right-0 h-14 bg-sidebar border-b border-sidebar-border flex items-center justify-between px-4 z-20 md:hidden">
+        <div className="flex items-center gap-3">
+          <img
+            src={`${import.meta.env.BASE_URL}localLedgerLogo.png`}
+            alt="LocalLedger Logo"
+            className="h-8 w-8"
+          />
+          <h1 className="text-lg font-bold text-sidebar-foreground">LocalLedger</h1>
+        </div>
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-sidebar-foreground">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-64 bg-sidebar border-l border-sidebar-border p-0">
+            <div className="p-6 border-b border-sidebar-border">
+              <div className="flex items-center gap-3">
+                <img
+                  src={`${import.meta.env.BASE_URL}localLedgerLogo.png`}
+                  alt="LocalLedger Logo"
+                  className="h-10 w-10"
+                />
+                <div>
+                  <h1 className="text-xl font-bold text-sidebar-foreground">LocalLedger</h1>
+                  <p className="text-xs text-sidebar-foreground/60 mt-1">Local-First Finance</p>
+                </div>
+              </div>
+            </div>
+            <nav className="p-4 space-y-1">
+              <NavContent onNavigate={() => setMobileMenuOpen(false)} />
+            </nav>
+          </SheetContent>
+        </Sheet>
+      </header>
+
+      {/* Desktop Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex flex-col transition-all duration-300 z-10",
+        "fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border flex-col transition-all duration-300 z-10 hidden md:flex",
         isCollapsed ? "w-16" : "w-64"
       )}>
         <div className={cn(
@@ -34,9 +91,9 @@ export function Layout({ children }: LayoutProps) {
             "flex items-center gap-3",
             isCollapsed ? "justify-center" : ""
           )}>
-            <img 
+            <img
               src={`${import.meta.env.BASE_URL}localLedgerLogo.png`}
-              alt="LocalLedger Logo" 
+              alt="LocalLedger Logo"
               className={cn(
                 "flex-shrink-0",
                 isCollapsed ? "h-8 w-8" : "h-10 w-10"
@@ -56,7 +113,7 @@ export function Layout({ children }: LayoutProps) {
             const navLink = (
               <NavLink
                 key={to}
-                to={to} 
+                to={to}
                 end={to === '/'}
                 className={cn(
                   "flex items-center rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
@@ -113,7 +170,9 @@ export function Layout({ children }: LayoutProps) {
       {/* Main content */}
       <main className={cn(
         "overflow-auto transition-all duration-300",
-        isCollapsed ? "ml-16" : "ml-64"
+        "pt-14 md:pt-0", // Account for mobile header
+        "md:ml-16 lg:ml-64", // Desktop sidebar margin
+        isCollapsed ? "md:ml-16" : "md:ml-64"
       )}>
         {children}
       </main>

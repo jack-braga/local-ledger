@@ -263,13 +263,13 @@ export default function Transactions() {
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Transactions</h1>
-          <p className="text-muted-foreground mt-1">View and categorize your transactions</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Transactions</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">View and categorize your transactions</p>
         </div>
-        <Button onClick={() => setImportOpen(true)} className={state.transactions.length === 0 ? "animate-wiggle" : ""}>
+        <Button onClick={() => setImportOpen(true)} className={`w-full sm:w-auto ${state.transactions.length === 0 ? "animate-wiggle" : ""}`}>
           <Upload className="h-4 w-4 mr-2" />
           Import CSV
         </Button>
@@ -296,8 +296,8 @@ export default function Transactions() {
       {/* Bulk Actions Bar */}
       {validSelection.size > 0 && (
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
+          <CardContent className="pt-4 md:pt-6">
+            <div className="flex flex-wrap items-center gap-2 md:gap-4">
               <Badge variant="secondary" className="px-3 py-1">
                 {validSelection.size} selected
               </Badge>
@@ -306,15 +306,17 @@ export default function Transactions() {
                 size="sm"
                 onClick={clearSelection}
               >
-                <X className="h-4 w-4 mr-2" />
-                Clear Selection
+                <X className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Clear Selection</span>
+                <span className="sm:hidden">Clear</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsBulkCategorizeDialogOpen(true)}
               >
-                Bulk Categorize
+                <span className="hidden sm:inline">Bulk Categorize</span>
+                <span className="sm:hidden">Categorize</span>
               </Button>
               <Button
                 variant="outline"
@@ -322,8 +324,9 @@ export default function Transactions() {
                 onClick={() => setIsBulkDeleteDialogOpen(true)}
                 className="text-destructive hover:text-destructive"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Selected
+                <Trash2 className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Delete Selected</span>
+                <span className="sm:hidden">Delete</span>
               </Button>
             </div>
           </CardContent>
@@ -331,9 +334,9 @@ export default function Transactions() {
       )}
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 md:p-6">
           <CardTitle>Transactions</CardTitle>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <Label htmlFor="compress-toggle" className="text-sm text-muted-foreground">
                 Compressed
@@ -344,14 +347,15 @@ export default function Transactions() {
                 onCheckedChange={setIsCompressed}
               />
             </div>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Transaction
+            <Button onClick={() => setIsAddDialogOpen(true)} size="sm" className="md:size-default">
+              <Plus className="h-4 w-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Add Transaction</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="relative w-full flex flex-col" style={{ height: 'calc(100vh - 200px)' }}>
+          <div className="relative w-full flex flex-col overflow-x-auto" style={{ height: 'calc(100vh - 250px)', minHeight: '400px' }}>
             {/* Header - Div-based with same grid template as rows */}
             <div
               className="grid border-b text-sm h-12 bg-muted/50 flex-shrink-0"
