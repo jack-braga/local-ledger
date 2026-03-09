@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Download, Trash, Upload } from 'lucide-react';
 import { Account, Bank } from '@/types/finance';
+import { clearState } from '@/lib/db';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const CURRENCIES = [
@@ -96,9 +97,9 @@ export default function Settings() {
     }
   };
 
-  const handleClearLocalStorage = () => {
+  const handleClearAllData = async () => {
     if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-      localStorage.removeItem('financeAppState');
+      await clearState();
       dispatch({ type: 'RESET_STATE' });
       window.location.reload();
     }
@@ -384,7 +385,7 @@ export default function Settings() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearLocalStorage} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    <AlertDialogAction onClick={handleClearAllData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                       Yes, clear all data
                     </AlertDialogAction>
                   </AlertDialogFooter>

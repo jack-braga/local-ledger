@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useState, ReactNode } from 'react';
 import { AppState, Transaction, Account, Category, CategoryRule, TransactionType } from '@/types/finance';
+import { loadState, saveState } from '@/lib/db';
 
 type Action =
   | { type: 'ADD_TRANSACTIONS'; transactions: Transaction[] }
@@ -38,7 +39,7 @@ function financeReducer(state: AppState, action: Action): AppState {
           ...state,
           transactions: [...state.transactions, ...action.transactions],
         };
-      
+
       case 'UPDATE_TRANSACTION':
         return {
           ...state,
@@ -46,7 +47,7 @@ function financeReducer(state: AppState, action: Action): AppState {
             t.id === action.id ? { ...t, ...action.updates } : t
           ),
         };
-      
+
       case 'MERGE_TRANSACTION': {
         return {
           ...state,
@@ -59,26 +60,26 @@ function financeReducer(state: AppState, action: Action): AppState {
                 date: action.csvData.date,
                 description: action.csvData.description,
               };
-              
+
               return updated;
             }
             return t;
           }),
         };
       }
-      
+
       case 'DELETE_TRANSACTION':
         return {
           ...state,
           transactions: state.transactions.filter(t => t.id !== action.id),
         };
-      
+
       case 'ADD_ACCOUNT':
         return {
           ...state,
           accounts: [...state.accounts, action.account],
         };
-      
+
       case 'UPDATE_ACCOUNT':
         return {
           ...state,
@@ -86,19 +87,19 @@ function financeReducer(state: AppState, action: Action): AppState {
             a.id === action.id ? { ...a, ...action.updates } : a
           ),
         };
-      
+
       case 'DELETE_ACCOUNT':
         return {
           ...state,
           accounts: state.accounts.filter(a => a.id !== action.id),
         };
-      
+
       case 'ADD_CATEGORY':
         return {
           ...state,
           categories: [...state.categories, action.category],
         };
-      
+
       case 'UPDATE_CATEGORY':
         return {
           ...state,
@@ -106,7 +107,7 @@ function financeReducer(state: AppState, action: Action): AppState {
             c.id === action.id ? { ...c, ...action.updates } : c
           ),
         };
-      
+
       case 'DELETE_CATEGORY':
         return {
           ...state,
@@ -114,13 +115,13 @@ function financeReducer(state: AppState, action: Action): AppState {
           // Cascade delete: remove all rules associated with this category
           rules: state.rules.filter(r => r.categoryId !== action.id),
         };
-      
+
       case 'ADD_RULE':
         return {
           ...state,
           rules: [...state.rules, action.rule],
         };
-      
+
       case 'UPDATE_RULE':
         return {
           ...state,
@@ -128,13 +129,13 @@ function financeReducer(state: AppState, action: Action): AppState {
             r.id === action.id ? { ...r, ...action.updates } : r
           ),
         };
-      
+
       case 'DELETE_RULE':
         return {
           ...state,
           rules: state.rules.filter(r => r.id !== action.id),
         };
-      
+
       case 'REORDER_RULES':
         // Reorder rules based on the provided array of rule IDs
         const ruleMap = new Map(state.rules.map(r => [r.id, r]));
@@ -147,13 +148,13 @@ function financeReducer(state: AppState, action: Action): AppState {
           ...state,
           rules: [...reorderedRules, ...remainingRules],
         };
-      
+
       case 'UPDATE_CURRENCY':
         return {
           ...state,
           currency: action.currency,
         };
-      
+
       case 'IMPORT_STATE':
         return {
           ...action.state,
@@ -161,14 +162,14 @@ function financeReducer(state: AppState, action: Action): AppState {
           version: action.state.version || '1.0.0',
           lastModified: new Date().toISOString(),
         };
-      
+
       case 'RESET_STATE':
         return {
           ...initialState,
           currency: 'AUD',
           lastModified: new Date().toISOString(),
         };
-      
+
       default:
         return state;
     }
@@ -185,31 +186,40 @@ interface FinanceContextValue {
   dispatch: React.Dispatch<Action>;
   exportState: () => void;
   importState: (file: File) => Promise<void>;
+  isLoading: boolean;
 }
 
 const FinanceContext = createContext<FinanceContextValue | undefined>(undefined);
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(financeReducer, initialState);
+  const [isLoading, setIsLoading] = useState(true);
+  const isInitialLoad = useRef(true);
 
-  // Load from localStorage on mount
+  // Load from IndexedDB on mount (with localStorage migration)
   useEffect(() => {
-    const stored = localStorage.getItem('financeAppState');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        dispatch({ type: 'IMPORT_STATE', state: parsed });
-      } catch (error) {
-        console.error('Failed to load state from localStorage:', error);
-      }
-    }
+    loadState()
+      .then((stored) => {
+        if (stored) {
+          dispatch({ type: 'IMPORT_STATE', state: stored });
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load state:', error);
+      })
+      .finally(() => {
+        setIsLoading(false);
+        isInitialLoad.current = false;
+      });
   }, []);
 
-  // Save to localStorage on state change (throttled)
+  // Save to IndexedDB on state change (debounced)
   useEffect(() => {
+    if (isInitialLoad.current) return;
+
     const timeoutId = setTimeout(() => {
-      localStorage.setItem('financeAppState', JSON.stringify(state));
-    }, 500); // Wait 500ms after last change
+      saveState(state);
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [state]);
@@ -237,13 +247,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       lastModified: new Date().toISOString(),
     };
     dispatch({ type: 'IMPORT_STATE', state: importedState });
-    // Immediately save to localStorage to prevent race condition
-    // This ensures data persists even if the page reloads quickly
-    localStorage.setItem('financeAppState', JSON.stringify(importedState));
+    // Immediately save to IndexedDB to prevent race condition
+    await saveState(importedState);
   };
 
   return (
-    <FinanceContext.Provider value={{ state, dispatch, exportState, importState }}>
+    <FinanceContext.Provider value={{ state, dispatch, exportState, importState, isLoading }}>
       {children}
     </FinanceContext.Provider>
   );

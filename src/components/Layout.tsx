@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { useFinance } from '@/contexts/FinanceContext';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
+  const { isLoading } = useFinance();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -38,6 +40,21 @@ export function Layout({ children }: LayoutProps) {
       ))}
     </>
   );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src={`${import.meta.env.BASE_URL}localLedgerLogo.png`}
+            alt="LocalLedger"
+            className="h-16 w-16 animate-pulse"
+          />
+          <p className="text-muted-foreground text-sm">Loading your data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -170,8 +187,7 @@ export function Layout({ children }: LayoutProps) {
       {/* Main content */}
       <main className={cn(
         "overflow-auto transition-all duration-300",
-        "pt-14 md:pt-0", // Account for mobile header
-        "md:ml-16 lg:ml-64", // Desktop sidebar margin
+        "pt-14 md:pt-0",
         isCollapsed ? "md:ml-16" : "md:ml-64"
       )}>
         {children}
