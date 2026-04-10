@@ -1,6 +1,7 @@
 import { useMemo, useState, useDeferredValue } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { useFinance } from '@/contexts/FinanceContext';
+import { useUIPreferences } from '@/contexts/UIPreferencesContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -37,16 +38,8 @@ const SCROLLBAR_WIDTH = 17;
 
 export default function Transactions() {
   const { state, dispatch } = useFinance();
+  const { isCompressed, setIsCompressed, filters, setFilters } = useUIPreferences();
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState<TransactionFilters>({
-    dateRange: {
-      startDate: null,
-      endDate: null,
-    },
-    transactionTypes: ['all'],
-    accountIds: [],
-    categoryIds: [],
-  });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -56,7 +49,6 @@ export default function Transactions() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [rawSelectedIds, setRawSelectedIds] = useState<Set<string>>(new Set());
   const [bulkCategoryId, setBulkCategoryId] = useState<string | null>(null);
-  const [isCompressed, setIsCompressed] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<Transaction>>({});
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
     date: new Date().toISOString().split('T')[0],

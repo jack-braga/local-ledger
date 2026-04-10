@@ -1,24 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
+import { useUIPreferences } from '@/contexts/UIPreferencesContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, CreditCard } from 'lucide-react';
 import { NetWorthChart } from '@/components/NetWorthChart';
 import { CategorySpendingChart } from '@/components/CategorySpendingChart';
 import { getTransactionType } from '@/utils/categoryMatcher';
-import { TransactionFiltersComponent, TransactionFilters, applyTransactionFilters } from '@/components/TransactionFilters';
+import { TransactionFiltersComponent, applyTransactionFilters } from '@/components/TransactionFilters';
 
 export default function Dashboard() {
   const { state } = useFinance();
-  const [filters, setFilters] = useState<TransactionFilters>({
-    dateRange: {
-      startDate: null,
-      endDate: null,
-    },
-    transactionTypes: ['all'],
-    accountIds: [],
-    categoryIds: [],
-  });
+  const { filters, setFilters } = useUIPreferences();
 
   // Apply filters to transactions
   const filteredTransactions = useMemo(() => {
