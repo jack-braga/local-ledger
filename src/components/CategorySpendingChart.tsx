@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { Transaction, Category } from '@/types/finance';
-import { getTransactionType } from '@/utils/categoryMatcher';
 
 interface CategorySpendingChartProps {
   transactions: Transaction[];
@@ -13,25 +12,16 @@ export function CategorySpendingChart({
   categories,
 }: CategorySpendingChartProps) {
   const chartData = useMemo(() => {
-    // Filter transactions: only EXPENSE type (negative amounts)
-    let filtered = transactions.filter(t => {
-      // Only include EXPENSE transactions (negative amounts)
-      if (getTransactionType(t.amount) !== 'EXPENSE') return false;
-      return true;
-    });
-
     // Group by category and calculate net total
     const categoryTotals = new Map<string, { name: string; total: number; color: string }>();
 
-    for (const transaction of filtered) {
+    for (const transaction of transactions) {
       const categoryId = transaction.categoryId || 'uncategorized';
       const category = categories.find(c => c.id === categoryId);
-      
-      // Calculate net total: Sum(Expenses) + Sum(Refunds)
-      // Refunds are positive amounts in EXPENSE category, so they reduce the total
+
       const currentTotal = categoryTotals.get(categoryId)?.total || 0;
-      const newTotal = currentTotal + transaction.amount; // amount is negative for expenses, positive for refunds
-      
+      const newTotal = currentTotal + transaction.amount;
+
       categoryTotals.set(categoryId, {
         name: category?.name || 'Uncategorized',
         total: newTotal,
@@ -39,17 +29,16 @@ export function CategorySpendingChart({
       });
     }
 
-    // Convert to array, convert to positive absolute value for visualization, and sort
+    // Convert to array and sort by absolute value
     const data = Array.from(categoryTotals.values())
       .map(item => ({
         name: item.name,
-        value: Math.abs(item.total), // Convert to positive absolute value for bars pointing UP
+        value: item.total,
         color: item.color,
-        netTotal: item.total, // Keep original for tooltip
       }))
-      .filter(item => item.value > 0) // Only show categories with spending
-      .sort((a, b) => b.value - a.value) // Sort by highest spending
-      .slice(0, 10); // Top 10 categories
+      .filter(item => item.value !== 0)
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+      .slice(0, 10);
 
     return data;
   }, [transactions, categories]);
@@ -57,7 +46,7 @@ export function CategorySpendingChart({
   if (chartData.length === 0) {
     return (
       <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-        No expense data available
+        No transaction data available
       </div>
     );
   }
@@ -75,7 +64,7 @@ export function CategorySpendingChart({
         />
         <YAxis
           tick={{ fill: 'hsl(var(--foreground))' }}
-          tickFormatter={(value) => `$${value.toLocaleString()}`}
+          tickFormatter={(value) => `${value < 0 ? '-' : ''}$${Math.abs(value).toLocaleString()}`}
         />
         <Tooltip
           contentStyle={{
@@ -83,27 +72,22 @@ export function CategorySpendingChart({
             border: '1px solid hsl(var(--border))',
             borderRadius: '0.5rem',
           }}
-          formatter={(value: number, name: string, item: any) => {
-            // Defensive check: Ensure the payload item exists
-            if (!item || !item.payload) return [value, name];
-
-            // Safely access the data
-            const data = item.payload;
-            const originalAmount = data.netTotal ?? value; // Fallback to value if netTotal is missing
-            const isNegative = originalAmount < 0;
-            return [
-              `$${Math.abs(originalAmount).toFixed(2)} ${isNegative ? '(Net Expense)' : '(Net Refund)'}`,
-              'Net Total',
-            ];
-          }}
+          formatter={(value: number) => [
+            `${value < 0 ? '-' : ''}$${Math.abs(value).toFixed(2)}`,
+            'Net Total',
+          ]}
         />
+        <ReferenceLine y={0} stroke="hsl(var(--border))" />
         <Bar
           dataKey="value"
           fill="hsl(var(--primary))"
-          radius={[8, 8, 0, 0]}
         >
           {chartData.map((entry, index) => (
-            <Cell key={index} fill={entry.color} />
+            <Cell
+              key={index}
+              fill={entry.color}
+              radius={entry.value >= 0 ? [8, 8, 0, 0] : [0, 0, 8, 8] as any}
+            />
           ))}
         </Bar>
       </BarChart>
