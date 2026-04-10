@@ -1,7 +1,7 @@
 export type TransactionType = 'INCOME' | 'EXPENSE';
 export type RuleTargetType = TransactionType | 'ALL';
 
-export type Bank = 'CBA' | 'STGEORGE' | 'OTHER';
+export type Bank = 'CBA' | 'CBA_CC' | 'STGEORGE' | 'OTHER';
 
 export interface Transaction {
   id: string;

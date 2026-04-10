@@ -158,7 +158,8 @@ export default function Settings() {
                         <SelectValue placeholder="Select bank" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="CBA">Commonwealth Bank (CBA)</SelectItem>
+                        <SelectItem value="CBA">CBA — Savings/Everyday</SelectItem>
+                        <SelectItem value="CBA_CC">CBA — Credit Card</SelectItem>
                         <SelectItem value="STGEORGE">St.George</SelectItem>
                         <SelectItem value="OTHER">Other</SelectItem>
                       </SelectContent>

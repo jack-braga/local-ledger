@@ -354,7 +354,7 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
                           <span>{account.name}</span>
                           {account.bankId && account.bankId !== 'OTHER' && (
                             <span className="text-xs text-muted-foreground">
-                              ({account.bankId === 'CBA' ? 'CBA' : account.bankId === 'STGEORGE' ? 'St.George' : account.bankId})
+                              ({account.bankId === 'CBA' ? 'CBA' : account.bankId === 'CBA_CC' ? 'CBA CC' : account.bankId === 'STGEORGE' ? 'St.George' : account.bankId})
                             </span>
                           )}
                         </div>
@@ -382,7 +382,8 @@ export function ImportWizard({ open, onOpenChange }: ImportWizardProps) {
                         <SelectValue placeholder="Select bank" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="CBA">Commonwealth Bank (CBA)</SelectItem>
+                        <SelectItem value="CBA">CBA — Savings/Everyday</SelectItem>
+                        <SelectItem value="CBA_CC">CBA — Credit Card</SelectItem>
                         <SelectItem value="STGEORGE">St.George</SelectItem>
                         <SelectItem value="OTHER">Other</SelectItem>
                       </SelectContent>

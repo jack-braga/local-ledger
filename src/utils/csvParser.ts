@@ -20,7 +20,7 @@ function detectDateColumn(headers: string[]): string | null {
 }
 
 function detectDescriptionColumn(headers: string[]): string | null {
-  const descKeywords = ['description', 'narrative', 'details', 'merchant', 'payee'];
+  const descKeywords = ['description', 'narration', 'narrative', 'details', 'merchant', 'payee'];
   return headers.find(h => 
     descKeywords.some(keyword => h.toLowerCase().includes(keyword))
   ) || null;
@@ -153,21 +153,54 @@ export function getBankColumnMapping(bankId: Bank, headers: string[]): CSVColumn
       };
     }
     
+    case 'CBA_CC': {
+      // CBA Credit Card format:
+      // BSB Number, Account Number, Transaction Date, Narration, Cheque Number, Debit, Credit, Balance, Transaction Type
+      const dateCol = normalizedHeaders.findIndex(h =>
+        h === 'transaction date' || h === 'date' || h.includes('date')
+      );
+      const descCol = normalizedHeaders.findIndex(h =>
+        h === 'narration' || h === 'description' || h === 'narrative' || h.includes('narration')
+      );
+      const debitCol = normalizedHeaders.findIndex(h =>
+        h === 'debit' || h.includes('debit')
+      );
+      const creditCol = normalizedHeaders.findIndex(h =>
+        h === 'credit' || h.includes('credit')
+      );
+      const balanceCol = normalizedHeaders.findIndex(h =>
+        h === 'balance' || h.includes('balance')
+      );
+
+      if (dateCol === -1 || descCol === -1 || (debitCol === -1 && creditCol === -1)) {
+        return null;
+      }
+
+      return {
+        dateColumn: headers[dateCol],
+        descriptionColumn: headers[descCol],
+        amountColumn: null,
+        debitColumn: debitCol !== -1 ? headers[debitCol] : null,
+        creditColumn: creditCol !== -1 ? headers[creditCol] : null,
+        balanceColumn: balanceCol !== -1 ? headers[balanceCol] : null,
+      };
+    }
+
     case 'STGEORGE': {
       // St.George format: Similar to CBA, typically Date, Description, Debit, Credit, Balance
-      const dateCol = normalizedHeaders.findIndex(h => 
+      const dateCol = normalizedHeaders.findIndex(h =>
         h === 'date' || h === 'transaction date' || h === 'value date' || h.includes('date')
       );
-      const descCol = normalizedHeaders.findIndex(h => 
-        h === 'description' || h === 'narrative' || h === 'details' || h.includes('description')
+      const descCol = normalizedHeaders.findIndex(h =>
+        h === 'description' || h === 'narration' || h === 'narrative' || h === 'details' || h.includes('description')
       );
-      const debitCol = normalizedHeaders.findIndex(h => 
+      const debitCol = normalizedHeaders.findIndex(h =>
         h === 'debit' || h === 'withdrawal' || h.includes('debit')
       );
-      const creditCol = normalizedHeaders.findIndex(h => 
+      const creditCol = normalizedHeaders.findIndex(h =>
         h === 'credit' || h === 'deposit' || h.includes('credit')
       );
-      const balanceCol = normalizedHeaders.findIndex(h => 
+      const balanceCol = normalizedHeaders.findIndex(h =>
         h === 'balance' || h.includes('balance')
       );
 
@@ -294,9 +327,9 @@ export async function parseCSV(
                 // Scenario B: Separate debit/credit columns
                 const debitStr = getValue(columnMapping.debitColumn) || '0';
                 const creditStr = getValue(columnMapping.creditColumn) || '0';
-                const debit = parseAmount(debitStr);
-                const credit = parseAmount(creditStr);
-                amount = credit - debit; // Credit is positive, debit is negative
+                const debit = Math.abs(parseAmount(debitStr));
+                const credit = Math.abs(parseAmount(creditStr));
+                amount = credit - debit;
                 console.log(`[CSV Parser] Row ${i}: debit:`, debit, 'credit:', credit, 'amount:', amount);
               } else {
                 console.log(`[CSV Parser] Row ${i}: Skipping - cannot determine amount`);
